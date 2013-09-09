@@ -411,6 +411,12 @@ int not_in_check()
     }
     for(i = 0; i < 8; i += 1)
     {
+        int tmp = place_of_king + moves_of_king[i];
+        if(board[tmp] == create_figure(not_turn_to_move, KING))
+            return 0;
+    }
+    for(i = 0; i < 8; i += 1)
+    {
         int tmp = place_of_king + moves_of_knight[i];
         if(board[tmp] == create_figure(not_turn_to_move, KNIGHT))
             return 0;
