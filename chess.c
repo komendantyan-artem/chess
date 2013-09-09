@@ -451,6 +451,7 @@ int generate_moves(Move *movelist)
     int i;
     
     int horizontal2 = turn_to_move == WHITE? 8 : 3;
+    int horizontal7 = turn_to_move == WHITE? 3 : 8;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
     int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
     int place_of_king = turn_to_move == WHITE? place_of_white_king:
@@ -672,7 +673,7 @@ int generate_moves(Move *movelist)
                             {
                                 Move tmp_move =
                                     {.from = current_cell, .to = tmp,
-                                    .broken = board[tmp];
+                                    .broken = board[tmp],
                                     .turn = create_figure(turn_to_move, 
                                     turn_figures[i])};
                                 movelist[n] = tmp_move;
