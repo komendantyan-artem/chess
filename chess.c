@@ -305,7 +305,7 @@ int get_rentgen_and_atackers
     //  when number_of_atackers == 2
     int i;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
-    int captures_of_pawn[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
+    int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
     int place_of_king = turn_to_move == WHITE? place_of_white_king:
                                                place_of_black_king;
     int number_of_atackers = 0;
@@ -314,7 +314,7 @@ int get_rentgen_and_atackers
         
     for(i = 0; i < 2; i += 1)
     {
-        int tmp = place_of_king - captures_of_pawn[i];
+        int tmp = place_of_king - captures_of_pawns[i];
         if(board[tmp] == create_figure(not_turn_to_move, PAWN))
         {
             number_of_atackers += 1;
@@ -395,17 +395,17 @@ int get_rentgen_and_atackers
     return number_of_atackers;
 }
 
-int not_in_check()
+int not_in_check(int turn_to_move)
 {
     int i;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
-    int captures_of_pawn[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
+    int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
     int place_of_king = turn_to_move == WHITE? place_of_white_king:
                                                place_of_black_king;
         
     for(i = 0; i < 2; i += 1)
     {
-        int tmp = place_of_king - captures_of_pawn[i];
+        int tmp = place_of_king - captures_of_pawns[i];
         if(board[tmp] == create_figure(not_turn_to_move, PAWN))
             return 0;
     }
@@ -448,8 +448,9 @@ int generate_moves(Move *movelist)
 {
     int i;
     
+    int horizontal2 = turn_to_move == WHITE? 8 : 3;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
-    int captures_of_pawn[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
+    int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
     int place_of_king = turn_to_move == WHITE? place_of_white_king:
                                                place_of_black_king;
     int n = 0;
@@ -469,7 +470,7 @@ int generate_moves(Move *movelist)
             Move tmp_move =
                 {.from = place_of_king, .to = tmp, .broken = board[tmp]};
             make_move(tmp_move);
-            if(not_in_check())
+            if(not_in_check(not_turn_to_move))
             {
                 movelist[n] = tmp_move;
                 n += 1;
@@ -492,12 +493,12 @@ int generate_moves(Move *movelist)
     {
         for(i = 0; i < 2; i += 1)
         {
-            int tmp = ply->en_passant - captures_of_pawn[i];
+            int tmp = ply->en_passant - captures_of_pawns[i];
             if(board[tmp] == create_figure(turn_to_move, PAWN))
             {
                 Move tmp_move = {.from = tmp, .to = ply->en_passant};
                 make_move(tmp_move);
-                if(not_in_check())
+                if(not_in_check(not_turn_to_move))
                 {
                     movelist[n] = tmp_move;
                     n += 1;
@@ -621,14 +622,44 @@ int generate_moves(Move *movelist)
                 }
                 break;
             case PAWN:
-                break;
+                ;int tmp = current_cell + direction_of_pawns;
+                if(!(rentgen[current_cell][0] &&
+                   rentgen[current_cell][1] == direction_of_pawns) &&
+                   board[tmp] == EMPTY)
+                {
+                    if(defend_against_check[tmp])
+                    {
+                        Move tmp_move = {.from = current_cell, .to = tmp};
+                    //IF TURN then tmp_move.turn in qrbn
+                        movelist[n] = tmp_move;
+                        n += 1;
+                    }
+                    tmp += direction_of_pawns;
+                    if(current_cell/10 == horizontal2 &&
+                       defend_against_check[tmp])
+                    {
+                        Move tmp_move = {.from = current_cell, .to = tmp};
+                        movelist[n] = tmp_move;
+                        n += 1;
+                    }
+                }
+                for(i = 0; i < 2; i += 1)
+                {
+                    int tmp = current_cell + captures_of_pawns[i];
+                    if(!(rentgen[current_cell][0] &&
+                         rentgen[current_cell][1] == captures_of_pawns[i]) &&
+                         defend_against_check[tmp] &&
+                         get_color(board[tmp]) == not_turn_to_move)
+                    {
+                        Move tmp_move = {.from = current_cell, .to = tmp,
+                            .broken = board[tmp]};
+                    //IF TURN then tmp_move.turn in qrbn
+                        movelist[n] = tmp_move;
+                        n += 1;
+                    }
+                }
         }
     }
-    
-    //We are check moves of other figures if they defend against check
-    //  and they are only in rentgen directions
-    //if number of atackers == 0 moves in all squares are defend against check
-    
     return n;
 }
 
@@ -656,7 +687,6 @@ int main()
 {
     setup_start_position();
     print_position();
-    Move list[300];
-    printf("%d", generate_moves(list));
+    printf("%d", perft(4));
     return 0;
 }
