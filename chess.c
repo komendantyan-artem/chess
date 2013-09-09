@@ -463,6 +463,17 @@ int generate_moves(Move *movelist)
     int number_of_atackers =
         get_rentgen_and_atackers(defend_against_check, rentgen);
     
+    int king_castling, queen_castling;
+    if(turn_to_move == WHITE)
+    {
+        king_castling  = ply->castlings & K_castling;
+        queen_castling = ply->castlings & Q_castling;
+    }
+    else
+    {
+        king_castling  = ply->castlings & k_castling;
+        queen_castling = ply->castlings & q_castling;
+    }
     for(i = 0; i < 8; i += 1)
     {
         int i_move = moves_of_king[i];
@@ -470,22 +481,44 @@ int generate_moves(Move *movelist)
         if(board[tmp] == EMPTY ||
            get_color(board[tmp]) == not_turn_to_move)
         {
+            int i_move_is_possible = 0;
             Move tmp_move =
                 {.from = place_of_king, .to = tmp, .broken = board[tmp]};
             make_move(tmp_move);
             if(not_in_check(not_turn_to_move))
             {
+                i_move_is_possible = 1;
                 movelist[n] = tmp_move;
                 n += 1;
-            //check_castlings
-                if(i_move == 1)
-                {
-                }
-                else if(i_move == -1)
-                {
-                }
             }
             unmake_move(tmp_move);
+            if(i_move_is_possible && i_move == 1 && king_castling &&
+                                        board[place_of_king + 2] == 0)
+            {
+                Move tmp_move = {.from = place_of_king,
+                                 .to = place_of_king + 2};
+                make_move(tmp_move);
+                if(not_in_check(not_turn_to_move))
+                {
+                    movelist[n] = tmp_move;
+                    n += 1;
+                }
+                unmake_move(tmp_move);
+            }
+            if(i_move_is_possible && i_move == -1 && queen_castling &&
+                                      board[place_of_king - 2] == 0 &&
+                                      board[place_of_king - 3] == 0)
+            {
+                Move tmp_move = {.from = place_of_king,
+                                 .to = place_of_king - 2};
+                make_move(tmp_move);
+                if(not_in_check(not_turn_to_move))
+                {
+                    movelist[n] = tmp_move;
+                    n += 1;
+                }
+                unmake_move(tmp_move);
+            }
         }
     }
     if(number_of_atackers == 2)
