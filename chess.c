@@ -193,7 +193,7 @@ void make_move(Move move)
     board[move.from] = EMPTY;
     if(move.turn)
         board[move.to] = move.turn;
-    if(move.to == ply->en_passant)
+    if(get_value(figure) == PAWN && move.to == ply->en_passant)
         board[move.to - direction_of_pawns] = EMPTY;
     ply += 1;
     if(get_value(figure) == PAWN &&
@@ -258,7 +258,7 @@ void unmake_move(Move move)
     else
         board[move.from] = figure;
     
-    if(move.to == ply->en_passant)
+    if(get_value(figure) == PAWN && move.to == ply->en_passant)
     {
         board[move.to] = EMPTY;
         board[move.to - direction_of_pawns] =
@@ -296,8 +296,11 @@ void unmake_move(Move move)
 
 //GENERATION MOVES
 
-int get_rentgens_and_atackers(int defend_of_check[120], int rentgens[120][2])
+int get_rentgens_and_atackers
+    (int defend_against_check[120], int rentgens[120][2])
 {
+    //rentgens is not very good my translate of svyazka
+    
     //Probably, function will be better if number_of_atackers will be returned
     //  when number_of_atackers == 2
     int i;
@@ -307,7 +310,7 @@ int get_rentgens_and_atackers(int defend_of_check[120], int rentgens[120][2])
                                                place_of_black_king;
     int number_of_atackers = 0;
     for(i = 0; i < 120; i += 1)
-        defend_of_check[i] = rentgens[i][0] = rentgens[i][1] = 0;
+        defend_against_check[i] = rentgens[i][0] = rentgens[i][1] = 0;
         
     for(i = 0; i < 2; i += 1)
     {
@@ -315,7 +318,7 @@ int get_rentgens_and_atackers(int defend_of_check[120], int rentgens[120][2])
         if(board[tmp] == create_figure(not_turn_to_move, PAWN))
         {
             number_of_atackers += 1;
-            defend_of_check[tmp] = 1;
+            defend_against_check[tmp] = 1;
         }
     }
     for(i = 0; i < 8; i += 1)
@@ -324,7 +327,7 @@ int get_rentgens_and_atackers(int defend_of_check[120], int rentgens[120][2])
         if(board[tmp] == create_figure(not_turn_to_move, KNIGHT))
         {
             number_of_atackers += 1;
-            defend_of_check[tmp] = 1;
+            defend_against_check[tmp] = 1;
         }
     }
     for(i = 0; i < 4; i += 1)
@@ -339,7 +342,7 @@ int get_rentgens_and_atackers(int defend_of_check[120], int rentgens[120][2])
             number_of_atackers += 1;
             while(x != place_of_king)
             {
-                defend_of_check[x] = 1;
+                defend_against_check[x] = 1;
                 x -= inc;
             }
         }
@@ -369,7 +372,7 @@ int get_rentgens_and_atackers(int defend_of_check[120], int rentgens[120][2])
             number_of_atackers += 1;
             while(x != place_of_king)
             {
-                defend_of_check[x] = 1;
+                defend_against_check[x] = 1;
                 x -= inc;
             }
         }
@@ -387,12 +390,56 @@ int get_rentgens_and_atackers(int defend_of_check[120], int rentgens[120][2])
             }
         }
     }
+    if(number_of_atackers == 0)
+        for(i = 0; i < 120; i += 1) defend_against_check[i] = 1;
     return number_of_atackers;
+}
+
+int not_in_check()
+{
+    int i;
+    int direction_of_pawns = turn_to_move == WHITE? -10: 10;
+    int captures_of_pawn[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
+    int place_of_king = turn_to_move == WHITE? place_of_white_king:
+                                               place_of_black_king;
+        
+    for(i = 0; i < 2; i += 1)
+    {
+        int tmp = place_of_king - captures_of_pawn[i];
+        if(board[tmp] == create_figure(not_turn_to_move, PAWN))
+            return 0;
+    }
+    for(i = 0; i < 8; i += 1)
+    {
+        int tmp = place_of_king + moves_of_knight[i];
+        if(board[tmp] == create_figure(not_turn_to_move, KNIGHT))
+            return 0;
+    }
+    for(i = 0; i < 4; i += 1)
+    {
+        int inc = directions_of_bishop[i];
+        int x = place_of_king + inc;
+        while(board[x] == EMPTY)
+            x += inc;
+        if(board[x] == create_figure(not_turn_to_move, QUEEN) ||
+           board[x] == create_figure(not_turn_to_move, BISHOP))
+                return 0;
+    }
+    for(i = 0; i < 4; i += 1)
+    {
+        int inc = directions_of_rook[i];
+        int x = place_of_king + inc;
+        while(board[x] == EMPTY)
+            x += inc;
+        if(board[x] == create_figure(not_turn_to_move, QUEEN) ||
+           board[x] == create_figure(not_turn_to_move, ROOK))
+                return 0;
+    }
+    return 1;
 }
 
 int generate_moves(Move *movelist)
 {
-    //rentgens is not very good my translate of svyazka
     int i;
     
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
@@ -402,29 +449,81 @@ int generate_moves(Move *movelist)
     int n = 0;
                                     
 
-    int defend_of_check[120], rentgens[120][2];
+    int defend_against_check[120], rentgens[120][2];
     int number_of_atackers =
-        get_rentgens_and_atackers(defend_of_check, rentgens);
+        get_rentgens_and_atackers(defend_against_check, rentgens);
 
+    for(i = 0; i < 8; i += 1)
+    {
+        int i_move = moves_of_king[i];
+        int tmp = place_of_king + i_move;
+        if(board[tmp] == EMPTY ||
+           get_color(board[tmp]) == not_turn_to_move)
+        {
+            Move tmp_move =
+                {.from = place_of_king, .to = tmp, .broken = board[tmp]};
+            make_move(tmp_move);
+            if(not_in_check())
+            {
+                movelist[n] = tmp_move;
+                n += 1;
+                //check_castlings
+                if(i_move == 1)
+                {
+                }
+                else if(i_move == -1)
+                {
+                }
+                
+            }
+            unmake_move(tmp_move);
+        }
+    }
+    if(number_of_atackers == 2)
+        return n;
     
-    if(number_of_atackers > 1)
+    if(ply->en_passant)
     {
-        //We are check only moves of king.
+        for(i = 0; i < 2; i += 1)
+        {
+            int tmp = ply->en_passant - captures_of_pawn[i];
+            if(board[tmp] == create_figure(turn_to_move, PAWN))
+            {
+                Move tmp_move = {.from = tmp, .to = ply->en_passant};
+                make_move(tmp_move);
+                if(not_in_check())
+                {
+                    movelist[n] = tmp_move;
+                    n += 1;
+                }
+                unmake_move(tmp_move);
+            }
+        }
     }
-    else if(number_of_atackers == 1)
+    for(i = 0; i < 64; i += 1)
     {
-        //We are check moves of king.
-        //We are check en passant.
-        //We are check moves of other figures if they defend of check
-        //  and they are only in rentgens directions
+        int current_cell = board64[i];
+        int figure = board[current_cell];
+        if(get_color(figure) != turn_to_move)
+            continue;
+        switch(figure)
+        {
+            case QUEEN:
+                break;
+            case ROOK:
+                break;
+            case BISHOP:
+                break;
+            case KNIGHT:
+                break;
+            case PAWN:
+                break;
+        }
     }
-    else
-    {
-        //We are check moves of king and castlings
-        //We are check en passant
-        //We are check moves of other figures
-        //  if they are only in rentgens directions
-    }
+    
+    //We are check moves of other figures if they defend against check
+    //  and they are only in rentgens directions
+    //if number of atackers == 0 moves in all squares are defend against check
     
     return n;
 }
