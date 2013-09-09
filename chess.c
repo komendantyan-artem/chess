@@ -27,6 +27,8 @@
 
 #define not_turn_to_move (turn_to_move ^ 1)
 
+int turn_figures[4] = {QUEEN, ROOK, BISHOP, KNIGHT};
+
 int directions_of_rook[4]   = {1, 10, -1, -10};
 int directions_of_bishop[4] = {9, 11, -9, -11};
 int directions_of_queen[8]  = {1, 10, -1, -10, 9, 11, -9, -11};
@@ -481,7 +483,6 @@ int generate_moves(Move *movelist)
                 else if(i_move == -1)
                 {
                 }
-                
             }
             unmake_move(tmp_move);
         }
@@ -629,10 +630,24 @@ int generate_moves(Move *movelist)
                 {
                     if(defend_against_check[tmp])
                     {
-                        Move tmp_move = {.from = current_cell, .to = tmp};
-                    //IF TURN then tmp_move.turn in qrbn
-                        movelist[n] = tmp_move;
-                        n += 1;
+                        if(current_cell/10 == horizontal7)
+                        {
+                            for(i = 0; i < 4; i += 1)
+                            {
+                                Move tmp_move =
+                                    {.from = current_cell, .to = tmp,
+                                    .turn = create_figure(turn_to_move, 
+                                    turn_figures[i])};
+                                movelist[n] = tmp_move;
+                                n += 1;
+                            }
+                        }
+                        else
+                        {
+                            Move tmp_move = {.from = current_cell, .to = tmp};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
                     }
                     tmp += direction_of_pawns;
                     if(current_cell/10 == horizontal2 &&
@@ -651,11 +666,26 @@ int generate_moves(Move *movelist)
                          defend_against_check[tmp] &&
                          get_color(board[tmp]) == not_turn_to_move)
                     {
-                        Move tmp_move = {.from = current_cell, .to = tmp,
-                            .broken = board[tmp]};
-                    //IF TURN then tmp_move.turn in qrbn
-                        movelist[n] = tmp_move;
-                        n += 1;
+                        if(current_cell/10 == horizontal7)
+                        {
+                            for(i = 0; i < 4; i += 1)
+                            {
+                                Move tmp_move =
+                                    {.from = current_cell, .to = tmp,
+                                    .broken = board[tmp];
+                                    .turn = create_figure(turn_to_move, 
+                                    turn_figures[i])};
+                                movelist[n] = tmp_move;
+                                n += 1;
+                            }
+                        }
+                        else
+                        {
+                            Move tmp_move = {.from = current_cell, .to = tmp,
+                                .broken = board[tmp]};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
                     }
                 }
         }
