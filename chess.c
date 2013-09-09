@@ -492,8 +492,10 @@ int generate_moves(Move *movelist)
                 n += 1;
             }
             unmake_move(tmp_move);
-            if(i_move_is_possible && i_move == 1 && king_castling &&
-                                        board[place_of_king + 2] == 0)
+            
+            if(!i_move_is_possible || board[tmp] != EMPTY)
+                continue;
+            if(i_move == 1 && king_castling && board[place_of_king + 2] == 0)
             {
                 Move tmp_move = {.from = place_of_king,
                                  .to = place_of_king + 2};
@@ -505,9 +507,8 @@ int generate_moves(Move *movelist)
                 }
                 unmake_move(tmp_move);
             }
-            if(i_move_is_possible && i_move == -1 && queen_castling &&
-                                      board[place_of_king - 2] == 0 &&
-                                      board[place_of_king - 3] == 0)
+            if(i_move == -1 && queen_castling && board[place_of_king - 2] == 0
+                                              && board[place_of_king - 3] == 0)
             {
                 Move tmp_move = {.from = place_of_king,
                                  .to = place_of_king - 2};
