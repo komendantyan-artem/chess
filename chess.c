@@ -316,7 +316,7 @@ int get_rentgen_and_atackers
         
     for(i = 0; i < 2; i += 1)
     {
-        int tmp = place_of_king - captures_of_pawns[i];
+        int tmp = place_of_king + captures_of_pawns[i];
         if(board[tmp] == create_figure(not_turn_to_move, PAWN))
         {
             number_of_atackers += 1;
@@ -407,7 +407,7 @@ int not_in_check(int turn_to_move)
         
     for(i = 0; i < 2; i += 1)
     {
-        int tmp = place_of_king - captures_of_pawns[i];
+        int tmp = place_of_king + captures_of_pawns[i];
         if(board[tmp] == create_figure(not_turn_to_move, PAWN))
             return 0;
     }
