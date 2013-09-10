@@ -220,12 +220,12 @@ void make_move(Move move)
             make_black_castlings_is_incorrect();
             horizontal = 20;
         }
-        if(move.to - move.from == 2)
+        if(move.from - move.to == 2)
         {
             board[horizontal + 4] = board[horizontal + 1];
             board[horizontal + 1] = EMPTY;
         }
-        else if(move.from - move.to == 2)
+        else if(move.to - move.from == 2)
         {
             board[horizontal + 6] = board[horizontal + 8];
             board[horizontal + 8] = EMPTY;
@@ -282,12 +282,12 @@ void unmake_move(Move move)
             place_of_black_king = move.from;
             horizontal = 20;
         }
-        if(move.to - move.from == 2)
+        if(move.from - move.to == 2)
         {
             board[horizontal + 1] = board[horizontal + 4];
             board[horizontal + 4] = EMPTY;
         }
-        else if(move.from - move.to == 2)
+        else if(move.to - move.from == 2)
         {
             board[horizontal + 8] = board[horizontal + 6];
             board[horizontal + 6] = EMPTY;
@@ -752,17 +752,21 @@ int perft(depth)
     return result;
 }
 
+#define check_perft_on_position(fen) \
+setup_position(fen);\
+printf("%d\n", perft(default_depth))
 int main()
 {
     //tests
-    int i;
-    setup_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    
     //setup_start_position();
-    /*Move movelist[300];
+    /*int i;
+    Move movelist[300];
     int n = generate_moves(movelist);
     for(i = 0; i < n; i += 1) printf("%d %d ||", movelist[i].from, movelist[i].to); 
     printf("\n");*/
-    print_position();
-    printf("%d\n", perft(3));
+    
+    int default_depth = 4;
+    check_perft_on_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     return 0;
 }
