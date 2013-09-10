@@ -222,8 +222,8 @@ void make_move(Move move)
         }
         if(move.to - move.from == 2)
         {
-            board[horizontal + 5] = board[horizontal + 2];
-            board[horizontal + 2] = EMPTY;
+            board[horizontal + 4] = board[horizontal + 1];
+            board[horizontal + 1] = EMPTY;
         }
         else if(move.from - move.to == 2)
         {
@@ -240,7 +240,7 @@ void make_move(Move move)
     if(board[21] != create_figure(BLACK, ROOK))
         make_q_castling_is_incorrect();
     
-    if(move.broken || get_color(figure) == PAWN)
+    if(move.broken || get_value(figure) == PAWN)
         ply->number_of_insignificant_plies = 0;
     else
         ply->number_of_insignificant_plies = 
@@ -284,13 +284,13 @@ void unmake_move(Move move)
         }
         if(move.to - move.from == 2)
         {
-            board[horizontal + 5] = board[horizontal + 2];
-            board[horizontal + 2] = EMPTY;
+            board[horizontal + 1] = board[horizontal + 4];
+            board[horizontal + 4] = EMPTY;
         }
         else if(move.from - move.to == 2)
         {
-            board[horizontal + 6] = board[horizontal + 8];
-            board[horizontal + 8] = EMPTY;
+            board[horizontal + 8] = board[horizontal + 6];
+            board[horizontal + 6] = EMPTY;
         }
     }
 }
@@ -348,7 +348,7 @@ int get_rentgen_and_atackers
                 x -= inc;
             }
         }
-        else if(get_color(board[x] == turn_to_move))
+        else if(get_color(board[x]) == turn_to_move)
         {
             int tmp = x;
             x += inc;
@@ -378,7 +378,7 @@ int get_rentgen_and_atackers
                 x -= inc;
             }
         }
-        else if(get_color(board[x] == turn_to_move))
+        else if(get_color(board[x]) == turn_to_move)
         {
             int tmp = x;
             x += inc;
@@ -495,7 +495,8 @@ int generate_moves(Move *movelist)
             
             if(!i_move_is_possible || board[tmp] != EMPTY)
                 continue;
-            if(i_move == 1 && king_castling && board[place_of_king + 2] == 0)
+            if(i_move == 1 && king_castling &&
+               board[place_of_king + 2] == EMPTY)
             {
                 Move tmp_move = {.from = place_of_king,
                                  .to = place_of_king + 2};
@@ -507,8 +508,9 @@ int generate_moves(Move *movelist)
                 }
                 unmake_move(tmp_move);
             }
-            if(i_move == -1 && queen_castling && board[place_of_king - 2] == 0
-                                              && board[place_of_king - 3] == 0)
+            if(i_move == -1 && queen_castling &&
+               board[place_of_king - 2] == EMPTY &&
+               board[place_of_king - 3] == EMPTY)
             {
                 Move tmp_move = {.from = place_of_king,
                                  .to = place_of_king - 2};
@@ -543,6 +545,7 @@ int generate_moves(Move *movelist)
             }
         }
     }
+    
     int i64;
     for(i64 = 0; i64 < 64; i64 += 1)
     {
@@ -660,7 +663,7 @@ int generate_moves(Move *movelist)
             case PAWN:
                 ;int tmp = current_cell + direction_of_pawns;
                 if(!(rentgen[current_cell][0] &&
-                   rentgen[current_cell][1] == direction_of_pawns) &&
+                   abs(rentgen[current_cell][1]) != abs(direction_of_pawns)) &&
                    board[tmp] == EMPTY)
                 {
                     if(defend_against_check[tmp])
@@ -685,7 +688,7 @@ int generate_moves(Move *movelist)
                         }
                     }
                     tmp += direction_of_pawns;
-                    if(current_cell/10 == horizontal2 &&
+                    if(board[tmp] == EMPTY && current_cell/10 == horizontal2 &&
                        defend_against_check[tmp])
                     {
                         Move tmp_move = {.from = current_cell, .to = tmp};
@@ -697,7 +700,8 @@ int generate_moves(Move *movelist)
                 {
                     int tmp = current_cell + captures_of_pawns[i];
                     if(!(rentgen[current_cell][0] &&
-                         rentgen[current_cell][1] == captures_of_pawns[i]) &&
+                         abs(rentgen[current_cell][1]) !=
+                             abs(captures_of_pawns[i])) &&
                          defend_against_check[tmp] &&
                          get_color(board[tmp]) == not_turn_to_move)
                     {
@@ -750,8 +754,15 @@ int perft(depth)
 
 int main()
 {
-    setup_start_position();
+    //tests
+    int i;
+    setup_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    //setup_start_position();
+    /*Move movelist[300];
+    int n = generate_moves(movelist);
+    for(i = 0; i < n; i += 1) printf("%d %d ||", movelist[i].from, movelist[i].to); 
+    printf("\n");*/
     print_position();
-    printf("%d", perft(4));
+    printf("%d\n", perft(3));
     return 0;
 }
