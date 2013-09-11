@@ -900,7 +900,7 @@ int perft(depth)
     return result;
 }
 
-#define check_perft_on_position(fen) \
+/*#define check_perft_on_position(fen) \
 setup_position(fen);\
 printf("%d\n", perft(default_depth))
 void test_perft()
@@ -914,12 +914,190 @@ void test_perft()
     //check_perft_on_position("rnbqkb1r/pp1p1ppp/2p5/4P3/2B5/8/PPP1NnPP/RNBQK2R w KQkq - 0 6");
     //check_perft_on_position("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
 
-    /*print_position();
+    print_position();
     int i;
     Move movelist[300];
     int n = generate_moves(movelist);
     for(i = 0; i < n; i += 1) printf("%d %d ||", movelist[i].from, movelist[i].to); 
-    printf("\n");*/
+    printf("\n");
+}*/
+
+
+
+
+//Now all piece-square tables are from
+//  http://chessprogramming.wikispaces.com/Simplified+evaluation+function
+
+//MATERIAL MUST BE USED!
+int PST_W_KING[64] = {
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -20,-30,-30,-40,-40,-30,-30,-20,
+    -10,-20,-20,-20,-20,-20,-20,-10,
+     20, 20,  0,  0,  0,  0, 20, 20,
+     20, 30, 10,  0,  0, 10, 30, 20
+};
+int PST_W_QUEEN[64] = {
+    -20,-10,-10, -5, -5,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5,  5,  5,  5,  0,-10,
+     -5,  0,  5,  5,  5,  5,  0, -5,
+      0,  0,  5,  5,  5,  5,  0, -5,
+    -10,  5,  5,  5,  5,  5,  0,-10,
+    -10,  0,  5,  0,  0,  0,  0,-10,
+    -20,-10,-10, -5, -5,-10,-10,-20
+};
+int PST_W_ROOK[64] = {
+    0,  0,  0,  0,  0,  0,  0,  0,
+    5, 10, 10, 10, 10, 10, 10,  5,
+   -5,  0,  0,  0,  0,  0,  0, -5,
+   -5,  0,  0,  0,  0,  0,  0, -5,
+   -5,  0,  0,  0,  0,  0,  0, -5,
+   -5,  0,  0,  0,  0,  0,  0, -5,
+   -5,  0,  0,  0,  0,  0,  0, -5,
+    0,  0,  0,  5,  5,  0,  0,  0
+};
+int PST_W_BISHOP[64] = {
+    -20,-10,-10,-10,-10,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5, 10, 10,  5,  0,-10,
+    -10,  5,  5, 10, 10,  5,  5,-10,
+    -10,  0, 10, 10, 10, 10,  0,-10,
+    -10, 10, 10, 10, 10, 10, 10,-10,
+    -10,  5,  0,  0,  0,  0,  5,-10,
+    -20,-10,-10,-10,-10,-10,-10,-20
+};
+int PST_W_KNIGHT[64] = {
+    -50,-40,-30,-30,-30,-30,-40,-50,
+    -40,-20,  0,  0,  0,  0,-20,-40,
+    -30,  0, 10, 15, 15, 10,  0,-30,
+    -30,  5, 15, 20, 20, 15,  5,-30,
+    -30,  0, 15, 20, 20, 15,  0,-30,
+    -30,  5, 10, 15, 15, 10,  5,-30,
+    -40,-20,  0,  5,  5,  0,-20,-40,
+    -50,-40,-30,-30,-30,-30,-40,-50
+};
+int PST_W_PAWN[64] = {
+     0,  0,  0,  0,  0,  0,  0,  0,
+    50, 50, 50, 50, 50, 50, 50, 50,
+    10, 10, 20, 30, 30, 20, 10, 10,
+     5,  5, 10, 25, 25, 10,  5,  5,
+     0,  0,  0, 20, 20,  0,  0,  0,
+     5, -5,-10,  0,  0,-10, -5,  5,
+     5, 10, 10,-20,-20, 10, 10,  5,
+     0,  0,  0,  0,  0,  0,  0,  0
+};
+int PST_B_KING[64] = {
+   -20,-30,-10,  0,  0,-10,-30,-20,
+   -20,-20,  0,  0,  0,  0,-20,-20,
+    10, 20, 20, 20, 20, 20, 20, 10,
+    20, 30, 30, 40, 40, 30, 30, 20,
+    30, 40, 40, 50, 50, 40, 40, 30,
+    30, 40, 40, 50, 50, 40, 40, 30,
+    30, 40, 40, 50, 50, 40, 40, 30,
+    30, 40, 40, 50, 50, 40, 40, 30
+};
+int PST_B_QUEEN[64] = {
+    20,10,10, 5, 5,10,10,20,
+    10, 0, 0, 0, 0,-5, 0,10,
+    10, 0,-5,-5,-5,-5,-5,10,
+     5, 0,-5,-5,-5,-5, 0, 0,
+     5, 0,-5,-5,-5,-5, 0, 5,
+    10, 0,-5,-5,-5,-5, 0,10,
+    10, 0, 0, 0, 0, 0, 0,10,
+    20,10,10, 5, 5,10,10,20
+};
+int PST_B_ROOK[64] = {
+      0,  0,  0, -5, -5,  0,  0,  0,
+      5,  0,  0,  0,  0,  0,  0,  5,
+      5,  0,  0,  0,  0,  0,  0,  5,
+      5,  0,  0,  0,  0,  0,  0,  5,
+      5,  0,  0,  0,  0,  0,  0,  5,
+      5,  0,  0,  0,  0,  0,  0,  5,
+     -5,-10,-10,-10,-10,-10,-10, -5,
+      0,  0,  0,  0,  0,  0,  0,  0
+};
+int PST_B_BISHOP[64] = {
+    20, 10, 10, 10, 10, 10, 10, 20,
+    10, -5,  0,  0,  0,  0, -5, 10,
+    10,-10,-10,-10,-10,-10,-10, 10,
+    10,  0,-10,-10,-10,-10,  0, 10,
+    10, -5, -5,-10,-10, -5, -5, 10,
+    10,  0, -5,-10,-10, -5,  0, 10,
+    10,  0,  0,  0,  0,  0,  0, 10,
+    20, 10, 10, 10, 10, 10, 10, 20
+};
+int PST_B_KNIGHT[64] = {
+    50, 40, 30, 30, 30, 30, 40, 50,
+    40, 20,  0, -5, -5,  0, 20, 40,
+    30, -5,-10,-15,-15,-10, -5, 30,
+    30,  0,-15,-20,-20,-15,  0, 30,
+    30, -5,-15,-20,-20,-15,- 5, 30,
+    30,  0,-10,-15,-15,-10,  0, 30,
+    40, 20,  0,  0,  0,  0, 20, 40,
+    50, 40, 30, 30, 30, 30, 40, 50
+};
+int PST_B_PAWN[64] = {
+      0,  0,  0,  0,  0,  0,  0,  0,
+     -5,-10,-10, 20, 20,-10,-10, -5,
+     -5,  5, 10,  0,  0, 10,  5, -5,
+      0,  0,  0,-20,-20,  0,  0,  0,
+     -5, -5,-10,-25,-25,-10, -5, -5,
+    -10,-10,-20,-30,-30,-20,-10,-10,
+    -50,-50,-50,-50,-50,-50,-50,-50,
+      0,  0,  0,  0,  0,  0,  0,  0,
+};
+
+int evaluate()
+{
+    int evaluation = 0;
+    
+    int i;
+    for(i = 0; i < 64; i += 1)
+    {
+        switch(board[board64[i]])
+        {
+            case create_figure(WHITE, KING):
+                evaluation += PST_W_KING[i];
+                break;
+            case create_figure(WHITE, QUEEN):
+                evaluation += PST_W_QUEEN[i];
+                break;
+            case create_figure(WHITE, ROOK):
+                evaluation += PST_W_ROOK[i];
+                break;
+            case create_figure(WHITE, BISHOP):
+                evaluation += PST_W_BISHOP[i];
+                break;
+            case create_figure(WHITE, KNIGHT):
+                evaluation += PST_W_KNIGHT[i];
+                break;
+            case create_figure(WHITE, PAWN):
+                evaluation += PST_W_KNIGHT[i];
+                break;
+            case create_figure(BLACK, KING):
+                evaluation += PST_B_KING[i];
+                break;
+            case create_figure(BLACK, QUEEN):
+                evaluation += PST_B_QUEEN[i];
+                break;
+            case create_figure(BLACK, ROOK):
+                evaluation += PST_B_ROOK[i];
+                break;
+            case create_figure(BLACK, BISHOP):
+                evaluation += PST_B_BISHOP[i];
+                break;
+            case create_figure(BLACK, KNIGHT):
+                evaluation += PST_B_KNIGHT[i];
+                break;
+            case create_figure(BLACK, PAWN):
+                evaluation += PST_B_PAWN[i];
+                break;
+        }
+    }
+    return turn_to_move == WHITE? evaluation: -evaluation;
 }
 
 
