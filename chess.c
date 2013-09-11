@@ -903,11 +903,11 @@ int perft(depth)
 #define check_perft_on_position(fen) \
 setup_position(fen);\
 printf("%d\n", perft(default_depth))
-int main()
+void test_perft()
 {
     //tests
     
-    int default_depth = 4;
+    //int default_depth = 4;
     //check_perft_on_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     //check_perft_on_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     //check_perft_on_position("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1");
@@ -920,5 +920,10 @@ int main()
     int n = generate_moves(movelist);
     for(i = 0; i < n; i += 1) printf("%d %d ||", movelist[i].from, movelist[i].to); 
     printf("\n");*/
+}
+
+
+int main()
+{
     return 0;
 }
