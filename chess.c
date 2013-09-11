@@ -191,8 +191,8 @@ void make_move(Move move)
 {
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
     int figure = board[move.from];
-    board[move.to] = figure;
     board[move.from] = EMPTY;
+    board[move.to] = figure;
     if(move.turn)
         board[move.to] = move.turn;
     if(get_value(figure) == PAWN && move.to == ply->en_passant)
@@ -296,15 +296,10 @@ void unmake_move(Move move)
 }
 
 
-//GENERATION MOVES
 
 int get_rentgen_and_atackers
     (int defend_against_check[120], int rentgen[120][2])
 {
-    //rentgen is not very good my translate of svyazka
-    
-    //Probably, function will be better if number_of_atackers will be returned
-    //  when number_of_atackers == 2
     int i;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
     int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
@@ -732,7 +727,6 @@ int generate_moves(Move *movelist)
     return n;
 }
 
-
 int perft(depth)
 {
     Move movelist[256];
@@ -766,7 +760,8 @@ int main()
     for(i = 0; i < n; i += 1) printf("%d %d ||", movelist[i].from, movelist[i].to); 
     printf("\n");*/
     
-    int default_depth = 4;
+    int default_depth = 3;
     check_perft_on_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    //check_perft_on_position("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1");
     return 0;
 }
