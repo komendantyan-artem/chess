@@ -27,6 +27,9 @@
 
 #define not_turn_to_move (turn_to_move ^ 1)
 
+#define DRAW 0
+#define LOSING -300000
+
 int turn_figures[4] = {QUEEN, ROOK, BISHOP, KNIGHT};
 
 int directions_of_rook[4]   = {1, 10, -1, -10};
@@ -881,6 +884,261 @@ int generate_moves(Move *movelist)
     return n;
 }
 
+int generate_captures(Move *movelist)
+{
+    int i;
+    
+    int horizontal2 = turn_to_move == WHITE? 8 : 3;
+    int horizontal7 = turn_to_move == WHITE? 3 : 8;
+    int direction_of_pawns = turn_to_move == WHITE? -10: 10;
+    int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
+    int place_of_king = turn_to_move == WHITE? place_of_white_king:
+                                               place_of_black_king;
+    int n = 0;
+                                    
+
+    int defend_against_check[120], rentgen[120][2];
+    int number_of_atackers =
+        get_rentgen_and_atackers(defend_against_check, rentgen);
+    
+    for(i = 0; i < 8; i += 1)
+    {
+        int tmp = place_of_king + moves_of_king[i];
+        if(get_color(board[tmp]) == not_turn_to_move)
+        {
+            Move tmp_move =
+                {.from = place_of_king, .to = tmp, .broken = board[tmp]};
+            make_move(tmp_move);
+            if(not_in_check(not_turn_to_move))
+            {;
+                movelist[n] = tmp_move;
+                n += 1;
+            }
+            unmake_move(tmp_move);
+        }
+    }
+    if(number_of_atackers == 2)
+        return n;
+    
+    if(ply->en_passant)
+    {
+        for(i = 0; i < 2; i += 1)
+        {
+            int tmp = ply->en_passant - captures_of_pawns[i];
+            if(board[tmp] == create_figure(turn_to_move, PAWN))
+            {
+                Move tmp_move = {.from = tmp, .to = ply->en_passant};
+                make_move(tmp_move);
+                if(not_in_check(not_turn_to_move))
+                {
+                    movelist[n] = tmp_move;
+                    n += 1;
+                }
+                unmake_move(tmp_move);
+            }
+        }
+    }
+    
+    if(number_of_atackers == 1)
+    {
+        int i64;
+        for(i64 = 0; i64 < 64; i64 += 1)
+        {
+            int current_cell = board64[i64];
+            int figure = board[current_cell];
+            if(get_color(figure) != turn_to_move || rentgen[current_cell][0])
+                continue;
+            switch(get_value(figure))
+            {
+                case QUEEN:
+                    for(i = 0; i < 8; i += 1)
+                    {
+                        int inc = directions_of_queen[i];
+                        int x = current_cell + inc;
+                        while(board[x] == EMPTY)
+                            x += inc;
+                        if(get_color(board[x]) == not_turn_to_move &&
+                           defend_against_check[x])
+                        {
+                            Move tmp_move = {.from = current_cell, .to = x,
+                                .broken = board[x]};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
+                    }
+                    break;
+                case ROOK:
+                    for(i = 0; i < 4; i += 1)
+                    {
+                        int inc = directions_of_rook[i];
+                        int x = current_cell + inc;
+                        while(board[x] == EMPTY)
+                            x += inc;
+                        if(get_color(board[x]) == not_turn_to_move &&
+                           defend_against_check[x])
+                        {
+                            Move tmp_move = {.from = current_cell, .to = x,
+                                .broken = board[x]};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
+                    }
+                    break;
+                case BISHOP:
+                    for(i = 0; i < 4; i += 1)
+                    {
+                        int inc = directions_of_bishop[i];
+                        int x = current_cell + inc;
+                        while(board[x] == EMPTY)
+                            x += inc;
+                        if(get_color(board[x]) == not_turn_to_move &&
+                           defend_against_check[x])
+                        {
+                            Move tmp_move = {.from = current_cell, .to = x,
+                                .broken = board[x]};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
+                    }
+                    break;
+                case KNIGHT:
+                    for(i = 0; i < 8; i += 1)
+                    {
+                        int tmp = current_cell + moves_of_knight[i];
+                        if(defend_against_check[tmp] &&
+                           get_color(board[tmp]) == not_turn_to_move)
+                        {
+                            Move tmp_move = {.from = current_cell,
+                                .to = tmp, .broken = board[tmp]};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
+                    }
+                    break;
+                case PAWN:
+                    for(i = 0; i < 2; i += 1)
+                    {
+                        int tmp = current_cell + captures_of_pawns[i];
+                        if(defend_against_check[tmp] &&
+                           get_color(board[tmp]) == not_turn_to_move)
+                        {
+                            Move tmp_move = {.from = current_cell,
+                                .to = tmp, .broken = board[tmp]};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
+                    }
+            }
+        }
+        return n;
+    }
+    //if(number_of_atackers == 0)
+    int i64;
+    for(i64 = 0; i64 < 64; i64 += 1)
+    {
+        int current_cell = board64[i64];
+        int figure = board[current_cell];
+        if(get_color(figure) != turn_to_move)
+            continue;
+        switch(get_value(figure))
+        {
+            case QUEEN:
+                for(i = 0; i < 8; i += 1)
+                {
+                    int inc = directions_of_queen[i];
+                    if(rentgen[current_cell][0] &&
+                       inc != rentgen[current_cell][1] &&
+                       -inc != rentgen[current_cell][1])
+                            continue;
+                    int x = current_cell + inc;
+                    while(board[x] == EMPTY)
+                        x += inc;
+                    if(get_color(board[x]) == not_turn_to_move)
+                    {
+                        Move tmp_move = {.from = current_cell, .to = x,
+                            .broken = board[x]};
+                        movelist[n] = tmp_move;
+                        n += 1;
+                    }
+                }
+                break;
+            case ROOK:
+                for(i = 0; i < 4; i += 1)
+                {
+                    int inc = directions_of_rook[i];
+                    if(rentgen[current_cell][0] &&
+                       inc != rentgen[current_cell][1] &&
+                       -inc != rentgen[current_cell][1])
+                            continue;
+                    int x = current_cell + inc;
+                    while(board[x] == EMPTY)
+                        x += inc;
+                    if(get_color(board[x]) == not_turn_to_move)
+                    {
+                        Move tmp_move = {.from = current_cell, .to = x,
+                            .broken = board[x]};
+                        movelist[n] = tmp_move;
+                        n += 1;
+                    }
+                }
+                break;
+            case BISHOP:
+                for(i = 0; i < 4; i += 1)
+                {
+                    int inc = directions_of_bishop[i];
+                    if(rentgen[current_cell][0] &&
+                       inc != rentgen[current_cell][1] &&
+                       -inc != rentgen[current_cell][1])
+                            continue;
+                    int x = current_cell + inc;
+                    while(board[x] == EMPTY)
+                        x += inc;
+                    if(get_color(board[x]) == not_turn_to_move)
+                    {
+                        Move tmp_move = {.from = current_cell, .to = x,
+                            .broken = board[x]};
+                        movelist[n] = tmp_move;
+                        n += 1;
+                    }
+                }
+                break;
+            case KNIGHT:
+                if(!rentgen[current_cell][0])
+                {
+                    for(i = 0; i < 8; i += 1)
+                    {
+                        int tmp = current_cell + moves_of_knight[i];
+                        if(get_color(board[tmp]) == not_turn_to_move)
+                        {
+                            Move tmp_move = {.from = current_cell, .to = tmp,
+                                .broken = board[tmp]};
+                            movelist[n] = tmp_move;
+                            n += 1;
+                        }
+                    }
+                }
+                break;
+            case PAWN:
+                for(i = 0; i < 2; i += 1)
+                {
+                    int capture = captures_of_pawns[i];
+                    int tmp = current_cell + capture;
+                    if(!(rentgen[current_cell][0] &&
+                         abs(rentgen[current_cell][1]) !=
+                             abs(capture)) &&
+                         get_color(board[tmp]) == not_turn_to_move)
+                    {
+                        Move tmp_move = {.from = current_cell, .to = tmp,
+                            .broken = board[tmp]};
+                        movelist[n] = tmp_move;
+                        n += 1;
+                    }
+                }
+        }
+    }
+    return n;
+}
+
 int perft(depth)
 {
     Move movelist[256];
@@ -1102,13 +1360,86 @@ int evaluate()
 
 
 
+int quiescence(int alpha, int beta)
+{
+    int static_evaluation = evaluate();
+    if(static_evaluation >= beta)
+        return beta;
+    if(static_evaluation > alpha)
+        alpha = static_evaluation;
+    
+    Move movelist[256];
+    int n = generate_captures(movelist);
+    //There is should be sorting captures/
+    int i;
+    for(i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        make_move(i_move);
+        int score = -quiescence(-beta, -alpha);
+        unmake_move(i_move);
+        
+        if(score >= beta)
+            return beta;
+        if(score > alpha)
+            alpha = score;
+    }
+    return alpha;
+}
+
 int alphabeta(int alpha, int beta, int depth)
 {
-    return 0;
+    if(depth == 0) return quiescence(alpha, beta);
+    
+    Move movelist[256];
+    int n = generate_moves(movelist);
+    if(n == 0)
+    {
+        if(not_in_check(turn_to_move))
+            return DRAW;
+        return LOSING; //+ ply
+    }
+    //There is should be sorting_moves.
+    int i;
+    for(i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        make_move(i_move);
+        int score = -alphabeta(-beta, -alpha, depth - 1);
+        unmake_move(i_move);
+        
+        if(score >= beta)
+            return beta;
+        if(score > alpha)
+            alpha = score;
+    }
+    return alpha;
 }
 
 Move search(int depth)
 {
+    int alpha = -1000000, beta = 1000000;
+    Move movelist[256];
+    int n = generate_moves(movelist);
+    //There is should be sorting_moves.
+    Move bestmove = {};
+    int i;
+    for(i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        make_move(i_move);
+        int score = -alphabeta(-beta, -alpha, depth - 1);
+        unmake_move(i_move);
+        
+        if(score >= beta)
+            return bestmove;
+        if(score > alpha)
+        {
+            bestmove = i_move;
+            alpha = score;
+        }
+    }
+    return bestmove;
 }
 
 int main()
