@@ -530,7 +530,8 @@ int generate_moves(Move *movelist)
             int tmp = ply->en_passant - captures_of_pawns[i];
             if(board[tmp] == create_figure(turn_to_move, PAWN))
             {
-                Move tmp_move = {.from = tmp, .to = ply->en_passant};
+                Move tmp_move = {.from = tmp, .to = ply->en_passant,
+                    .broken = create_figure(not_turn_to_move, PAWN)};
                 make_move(tmp_move);
                 if(not_in_check(not_turn_to_move))
                 {
@@ -910,7 +911,7 @@ int generate_captures(Move *movelist)
                 {.from = place_of_king, .to = tmp, .broken = board[tmp]};
             make_move(tmp_move);
             if(not_in_check(not_turn_to_move))
-            {;
+            {
                 movelist[n] = tmp_move;
                 n += 1;
             }
@@ -927,7 +928,8 @@ int generate_captures(Move *movelist)
             int tmp = ply->en_passant - captures_of_pawns[i];
             if(board[tmp] == create_figure(turn_to_move, PAWN))
             {
-                Move tmp_move = {.from = tmp, .to = ply->en_passant};
+                Move tmp_move = {.from = tmp, .to = ply->en_passant,
+                    .broken = create_figure(not_turn_to_move, PAWN)};
                 make_move(tmp_move);
                 if(not_in_check(not_turn_to_move))
                 {
@@ -1360,6 +1362,50 @@ int evaluate()
 
 
 
+int value_for_mvvlva(int figure)
+{
+    switch(get_value(figure))
+    {
+        case QUEEN : return 5;
+        case ROOK  : return 4;
+        case BISHOP: return 3;
+        case KNIGHT: return 2;
+        case PAWN  : return 1;
+        default    : return 0;
+    }
+}
+
+void sorting_captures(Move *movelist, int n)
+{
+    int sorting_values[n];
+    int i;
+    for(i = 0; i < n; i += 1)
+    {
+        int figure = value_for_mvvlva(board[movelist[i].to]);
+        int broken = value_for_mvvlva(movelist[i].broken);
+        sorting_values[i] = broken * 10 - figure;
+    }
+    for(i = 1; i < n; i += 1)
+    {
+        int j = i;
+        while(sorting_values[j] < sorting_values[j - 1] && j > 0)
+        {
+            int tmp = sorting_values[j];
+            sorting_values[j] = sorting_values[j - 1];
+            sorting_values[j - 1] = tmp;
+            
+            Move tmp2 = movelist[j];
+            movelist[j] = movelist[j - 1];
+            movelist[j - 1] = tmp2;
+            j -= 1;
+        }
+    }
+}
+
+void sorting_moves(Move *movelist, int n)
+{
+}
+
 int quiescence(int alpha, int beta)
 {
     int static_evaluation = evaluate();
@@ -1370,7 +1416,7 @@ int quiescence(int alpha, int beta)
     
     Move movelist[256];
     int n = generate_captures(movelist);
-    //There is should be sorting captures/
+    //sorting_captures(movelist, n);
     int i;
     for(i = 0; i < n; i += 1)
     {
@@ -1399,7 +1445,7 @@ int alphabeta(int alpha, int beta, int depth)
             return DRAW;
         return LOSING; //+ ply
     }
-    //There is should be sorting_moves.
+    //sorting_moves(movelist, n);
     int i;
     for(i = 0; i < n; i += 1)
     {
@@ -1421,7 +1467,8 @@ Move search(int depth)
     int alpha = -1000000, beta = 1000000;
     Move movelist[256];
     int n = generate_moves(movelist);
-    //There is should be sorting_moves.
+    //sorting_moves(movelist, n);
+    
     Move bestmove = {};
     int i;
     for(i = 0; i < n; i += 1)
@@ -1444,5 +1491,8 @@ Move search(int depth)
 
 int main()
 {
+    //Movelist should save pointers to moves, not moves
+    setup_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    search(2);
     return 0;
 }
