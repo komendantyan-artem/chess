@@ -87,6 +87,7 @@ void print_position()
     }
 }
 
+#define start_fen
 void setup_position(char* fen)
 {
     int i, current_cell;
@@ -175,11 +176,6 @@ void setup_position(char* fen)
         ply->number_of_insignificant_plies = ((fen[i] - '0') * 10 + 
                                                          fen[i + 1] - '0');
     //Number of moves is not used.
-}
-
-void setup_start_position()
-{
-    setup_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 }
 
 
@@ -1160,27 +1156,9 @@ int perft(depth)
     return result;
 }
 
-/*#define check_perft_on_position(fen) \
+#define check_perft_on_position(fen) \
 setup_position(fen);\
 printf("%d\n", perft(default_depth))
-void test_perft()
-{
-    //tests
-    
-    //int default_depth = 4;
-    //check_perft_on_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-    //check_perft_on_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    //check_perft_on_position("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1");
-    //check_perft_on_position("rnbqkb1r/pp1p1ppp/2p5/4P3/2B5/8/PPP1NnPP/RNBQK2R w KQkq - 0 6");
-    //check_perft_on_position("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
-
-    print_position();
-    int i;
-    Move movelist[300];
-    int n = generate_moves(movelist);
-    for(i = 0; i < n; i += 1) printf("%d %d ||", movelist[i].from, movelist[i].to); 
-    printf("\n");
-}*/
 
 
 
