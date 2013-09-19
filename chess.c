@@ -87,7 +87,7 @@ void print_position()
     }
 }
 
-#define start_fen
+#define start_fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 void setup_position(char* fen)
 {
     int i, current_cell;
@@ -1156,9 +1156,9 @@ int perft(depth)
     return result;
 }
 
-#define check_perft_on_position(fen) \
+#define check_perft_on_position(depth, fen) \
 setup_position(fen);\
-printf("%d\n", perft(default_depth))
+printf("%d\n", perft(depth))
 
 
 
@@ -1470,7 +1470,7 @@ Move search(int depth)
 int main()
 {
     //Movelist should save pointers to moves, not moves
-    setup_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-    search(2);
+    //setup_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    check_perft_on_position(5, start_fen);
     return 0;
 }
