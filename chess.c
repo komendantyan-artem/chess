@@ -1366,7 +1366,7 @@ void sorting_captures(Move *movelist, int n)
     for(i = 1; i < n; i += 1)
     {
         int j = i;
-        while(sorting_values[j] < sorting_values[j - 1] && j > 0)
+        while(sorting_values[j] > sorting_values[j - 1] && j > 0)
         {
             int tmp = sorting_values[j];
             sorting_values[j] = sorting_values[j - 1];
@@ -1380,9 +1380,7 @@ void sorting_captures(Move *movelist, int n)
     }
 }
 
-void sorting_moves(Move *movelist, int n)
-{
-}
+#define sorting_moves(movelist, n) sorting_captures(movelist, n)
 
 int quiescence(int alpha, int beta)
 {
@@ -1394,7 +1392,7 @@ int quiescence(int alpha, int beta)
     
     Move movelist[256];
     int n = generate_captures(movelist);
-    //sorting_captures(movelist, n);
+    sorting_captures(movelist, n);
     int i;
     for(i = 0; i < n; i += 1)
     {
@@ -1423,7 +1421,7 @@ int alphabeta(int alpha, int beta, int depth)
             return DRAW;
         return LOSING; //+ ply
     }
-    //sorting_moves(movelist, n);
+    sorting_moves(movelist, n);
     int i;
     for(i = 0; i < n; i += 1)
     {
@@ -1445,7 +1443,7 @@ Move search(int depth)
     int alpha = -1000000, beta = 1000000;
     Move movelist[256];
     int n = generate_moves(movelist);
-    //sorting_moves(movelist, n);
+    sorting_moves(movelist, n);
     
     Move bestmove = {};
     int i;
@@ -1470,7 +1468,8 @@ Move search(int depth)
 int main()
 {
     //Movelist should save pointers to moves, not moves
+    //check_perft_on_position(6, start_fen);
     //setup_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-    check_perft_on_position(5, start_fen);
+    //search(5);
     return 0;
 }
