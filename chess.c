@@ -57,7 +57,7 @@ struct _flags {
     int en_passant;
     int castlings;
     int number_of_insignificant_plies;
-} flags[1000], *ply;
+} begin_ply[1000], *ply;
 
 void print_position()
 {
@@ -85,13 +85,14 @@ void print_position()
         }
         printf("\n");
     }
+    printf("\n");
 }
 
 #define start_fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 void setup_position(char* fen)
 {
     int i, current_cell;
-    ply = flags;
+    ply = begin_ply;
     turn_to_move = WHITE;
     ply->en_passant = 0;
     ply->castlings = 0;
@@ -1313,7 +1314,7 @@ int evaluate()
                 evaluation += PST_W_KNIGHT[i];
                 break;
             case create_figure(WHITE, PAWN):
-                evaluation += PST_W_KNIGHT[i];
+                evaluation += PST_W_PAWN[i];
                 break;
             case create_figure(BLACK, KING):
                 evaluation += PST_B_KING[i];
@@ -1454,8 +1455,6 @@ Move search(int depth)
         int score = -alphabeta(-beta, -alpha, depth - 1);
         unmake_move(i_move);
         
-        if(score >= beta)
-            return bestmove;
         if(score > alpha)
         {
             bestmove = i_move;
@@ -1465,11 +1464,68 @@ Move search(int depth)
     return bestmove;
 }
 
+
+//game with engine
+
+Move parse_move(char *string)
+{
+    Move None = {0, 0, 0, 0};
+    Move move = {};
+    int i;
+    for(i = 0; i < 4; i += 1)
+        if(string[i] == '\0') return None;
+    if(!((string[0] >= 'a' && string[0] <= 'h') &&
+         (string[1] >= '1' && string[1] <= '8') &&
+         (string[2] >= 'a' && string[2] <= 'h') &&
+         (string[3] >= '1' && string[3] <= '8'))) return None;
+    move.from = ('8' - string[1] + 2) * 10 + (string[0] - 'a' + 1);
+    move.to   = ('8' - string[3] + 2) * 10 + (string[2] - 'a' + 1);
+    move.broken = board[move.to];
+    switch(string[4])
+    {
+        case 'q': move.turn = create_figure(turn_to_move, QUEEN); break;
+        case 'r': move.turn = create_figure(turn_to_move, ROOK); break;
+        case 'b': move.turn = create_figure(turn_to_move, BISHOP); break;
+        case 'n': move.turn = create_figure(turn_to_move, KNIGHT); break;
+        case '\0': return move;
+        default: return None;
+    }
+}
+
 int main()
 {
-    //Movelist should save pointers to moves, not moves
-    //check_perft_on_position(6, start_fen);
-    //setup_position("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-    //search(5);
+    Move movelist[256];
+    int n;
+    int default_depth = 5;
+    setup_position(start_fen);
+    while(1)
+    {
+        print_position();
+        n = generate_moves(movelist);
+        int flag = 1;
+        while(flag)
+        {
+            char string[10];
+            scanf("%s", string);
+            Move move = parse_move(string);
+            int i;
+            for(i = 0; i < n; i += 1)
+            {
+                Move i_move = movelist[i]; 
+                if(move.from == i_move.from && move.to == i_move.to &&
+                    move.turn == i_move.turn)
+                {
+                    make_move(move);
+                    flag = 0;
+                }
+            }
+        }
+        
+        print_position();
+        Move bestmove = search(default_depth);
+        if(bestmove.from == 0)
+            break;
+        make_move(bestmove);
+    }
     return 0;
 }
