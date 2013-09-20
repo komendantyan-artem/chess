@@ -1419,7 +1419,7 @@ int alphabeta(int alpha, int beta, int depth)
     {
         if(not_in_check(turn_to_move))
             return DRAW;
-        return LOSING; //+ ply
+        return LOSING + ply - begin_ply;
     }
     sorting_moves(movelist, n);
     int i;
