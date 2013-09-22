@@ -1483,13 +1483,14 @@ Move parse_move(char *string)
     move.broken = board[move.to];
     switch(string[4])
     {
+        case '\0': break;
         case 'q': move.turn = create_figure(turn_to_move, QUEEN); break;
         case 'r': move.turn = create_figure(turn_to_move, ROOK); break;
         case 'b': move.turn = create_figure(turn_to_move, BISHOP); break;
         case 'n': move.turn = create_figure(turn_to_move, KNIGHT); break;
-        case '\0': return move;
         default: return None;
     }
+    return move;
 }
 
 int main()
