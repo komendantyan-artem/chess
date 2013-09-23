@@ -1341,16 +1341,34 @@ int evaluate()
 
 
 
+int history[32][120][120];
+void clear_history()
+{
+    int i;
+    for(i = 0; i < 32; i += 1)
+    {
+        int j;
+        for(j = 0; j < 120; j += 1)
+        {
+            int k;
+            for(k = 0; k < 120; k += 1)
+            {
+                history[i][j][k] = 0;
+            }
+        }
+    }
+}
+
 int value_for_mvvlva(int figure)
 {
     switch(get_value(figure))
     {
-        case QUEEN : return 5;
-        case ROOK  : return 4;
-        case BISHOP: return 3;
-        case KNIGHT: return 2;
-        case PAWN  : return 1;
-        default    : return 0;
+        case QUEEN : return 6;
+        case ROOK  : return 5;
+        case BISHOP: return 4;
+        case KNIGHT: return 3;
+        case PAWN  : return 2;
+        default    : return 1;
     }
 }
 
@@ -1360,7 +1378,7 @@ void sorting_captures(Move *movelist, int n)
     int i;
     for(i = 0; i < n; i += 1)
     {
-        int figure = value_for_mvvlva(board[movelist[i].to]);
+        int figure = value_for_mvvlva(board[movelist[i].from]);
         int broken = value_for_mvvlva(movelist[i].broken);
         sorting_values[i] = broken * 10 - figure;
     }
@@ -1381,7 +1399,40 @@ void sorting_captures(Move *movelist, int n)
     }
 }
 
-#define sorting_moves(movelist, n) sorting_captures(movelist, n)
+void sorting_moves(Move *movelist, int n)
+{
+    int sorting_values[n];
+    int i;
+    for(i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        if(i_move.broken)
+        {
+            int figure = value_for_mvvlva(board[i_move.to]);
+            int broken = value_for_mvvlva(i_move.broken);
+            sorting_values[i] = 100000*(broken * 10 - figure);
+        }
+        else
+        {
+            sorting_values[i] = history[board[i_move.from]][i_move.from][i_move.to];
+        }
+    }
+    for(i = 1; i < n; i += 1)
+    {
+        int j = i;
+        while(sorting_values[j] > sorting_values[j - 1] && j > 0)
+        {
+            int tmp = sorting_values[j];
+            sorting_values[j] = sorting_values[j - 1];
+            sorting_values[j - 1] = tmp;
+            
+            Move tmp2 = movelist[j];
+            movelist[j] = movelist[j - 1];
+            movelist[j - 1] = tmp2;
+            j -= 1;
+        }
+    }
+}
 
 int quiescence(int alpha, int beta)
 {
@@ -1403,9 +1454,13 @@ int quiescence(int alpha, int beta)
         unmake_move(i_move);
         
         if(score >= beta)
+        {
             return beta;
+        }
         if(score > alpha)
+        {
             alpha = score;
+        }
     }
     return alpha;
 }
@@ -1432,9 +1487,17 @@ int alphabeta(int alpha, int beta, int depth)
         unmake_move(i_move);
         
         if(score >= beta)
+        {
+            if(!i_move.broken)
+            {
+                history[board[i_move.from]][i_move.from][i_move.to] = depth * depth;
+            }
             return beta;
+        }
         if(score > alpha)
+        {
             alpha = score;
+        }
     }
     return alpha;
 }
@@ -1443,6 +1506,7 @@ Move search(int depth)
 {
     int alpha = -1000000, beta = 1000000;
     Move movelist[256];
+    
     int n = generate_moves(movelist);
     sorting_moves(movelist, n);
     
@@ -1497,7 +1561,8 @@ int main()
 {
     Move movelist[256];
     int n;
-    int default_depth = 5;
+    int default_depth = 6;
+    clear_history();
     setup_position(start_fen);
     while(1)
     {
