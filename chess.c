@@ -1341,7 +1341,7 @@ int evaluate()
 
 
 
-int history[32][120][120];
+int history[32][120];
 void clear_history()
 {
     int i;
@@ -1350,11 +1350,7 @@ void clear_history()
         int j;
         for(j = 0; j < 120; j += 1)
         {
-            int k;
-            for(k = 0; k < 120; k += 1)
-            {
-                history[i][j][k] = 0;
-            }
+            history[i][j] = 0;
         }
     }
 }
@@ -1414,7 +1410,7 @@ void sorting_moves(Move *movelist, int n)
         }
         else
         {
-            sorting_values[i] = history[board[i_move.from]][i_move.from][i_move.to];
+            sorting_values[i] = history[board[i_move.from]][i_move.to];
         }
     }
     for(i = 1; i < n; i += 1)
@@ -1490,7 +1486,7 @@ int alphabeta(int alpha, int beta, int depth)
         {
             if(!i_move.broken)
             {
-                history[board[i_move.from]][i_move.from][i_move.to] = depth * depth;
+                history[board[i_move.from]][i_move.to] = depth * depth;
             }
             return beta;
         }
