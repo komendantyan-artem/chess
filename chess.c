@@ -918,26 +918,6 @@ int generate_captures(Move *movelist)
     if(number_of_atackers == 2)
         return n;
     
-    if(ply->en_passant)
-    {
-        for(i = 0; i < 2; i += 1)
-        {
-            int tmp = ply->en_passant - captures_of_pawns[i];
-            if(board[tmp] == create_figure(turn_to_move, PAWN))
-            {
-                Move tmp_move = {.from = tmp, .to = ply->en_passant,
-                    .broken = create_figure(not_turn_to_move, PAWN)};
-                make_move(tmp_move);
-                if(not_in_check(not_turn_to_move))
-                {
-                    movelist[n] = tmp_move;
-                    n += 1;
-                }
-                unmake_move(tmp_move);
-            }
-        }
-    }
-    
     if(number_of_atackers == 1)
     {
         int i64;
