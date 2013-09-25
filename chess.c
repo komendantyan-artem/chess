@@ -1458,7 +1458,7 @@ Move parse_move(char *string)
         case 'r':  turn = create_figure(turn_to_move, ROOK); break;
         case 'b':  turn = create_figure(turn_to_move, BISHOP); break;
         case 'n':  turn = create_figure(turn_to_move, KNIGHT); break;
-        default: return 0;
+        default:   return 0;
     }
     return create_move(from, to, broken, turn);
 }
