@@ -197,7 +197,7 @@ void make_move(Move move)
     board[from] = EMPTY;
     board[to] = figure;
     if(turn)
-        board[move_to(move)] = turn;
+        board[to] = turn;
     if(get_value(figure) == PAWN && to == ply->en_passant)
         board[to - direction_of_pawns] = EMPTY;
     ply += 1;
@@ -242,7 +242,7 @@ void make_move(Move move)
     if(board[21] != create_figure(BLACK, ROOK))
         make_q_castling_is_incorrect();
     
-    if(move_broken(move) || get_value(figure) == PAWN)
+    if(broken || get_value(figure) == PAWN)
         ply->number_of_insignificant_plies = 0;
     else
         ply->number_of_insignificant_plies = 
