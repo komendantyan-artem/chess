@@ -190,17 +190,19 @@ typedef int Move;
 void make_move(Move move)
 {
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
-    int figure = board[move_from(move)];
-    board[move_from(move)] = EMPTY;
-    board[move_to(move)] = figure;
-    if(move_turn(move))
-        board[move_to(move)] = move_turn(move);
-    if(get_value(figure) == PAWN && move_to(move) == ply->en_passant)
-        board[move_to(move) - direction_of_pawns] = EMPTY;
+    int from = move_from(move);
+    int figure = board[from];
+    int to = move_to(move);
+    int turn = move_turn(move);
+    board[from] = EMPTY;
+    board[to] = figure;
+    if(turn)
+        board[move_to(move)] = turn;
+    if(get_value(figure) == PAWN && to == ply->en_passant)
+        board[to - direction_of_pawns] = EMPTY;
     ply += 1;
-    if(get_value(figure) == PAWN &&
-       move_to(move) - move_from(move) == direction_of_pawns*2)
-            ply->en_passant = move_from(move) + direction_of_pawns;
+    if(get_value(figure) == PAWN && to - from == direction_of_pawns * 2)
+        ply->en_passant = from + direction_of_pawns;
     else
         ply->en_passant = 0;
     
@@ -210,22 +212,22 @@ void make_move(Move move)
         int horizontal;
         if(turn_to_move == WHITE)
         {
-            place_of_white_king = move_to(move);
+            place_of_white_king = to;
             make_white_castlings_is_incorrect();
             horizontal = 90;
         }
         else
         {
-            place_of_black_king = move_to(move);
+            place_of_black_king = to;
             make_black_castlings_is_incorrect();
             horizontal = 20;
         }
-        if(move_from(move) - move_to(move) == 2)
+        if(from - to == 2)
         {
             board[horizontal + 4] = board[horizontal + 1];
             board[horizontal + 1] = EMPTY;
         }
-        else if(move_to(move) - move_from(move) == 2)
+        else if(to - from == 2)
         {
             board[horizontal + 6] = board[horizontal + 8];
             board[horizontal + 8] = EMPTY;
@@ -253,41 +255,44 @@ void unmake_move(Move move)
     turn_to_move = not_turn_to_move;
     ply -= 1;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
+    int from = move_from(move);
+    int to = move_to(move);
     int figure = board[move_to(move)];
+    int broken = move_broken(move);
+    int turn = move_turn(move);
 
-    if(move_turn(move))
-        board[move_from(move)] = create_figure(turn_to_move, PAWN);
+    if(turn)
+        board[from] = create_figure(turn_to_move, PAWN);
     else
-        board[move_from(move)] = figure;
+        board[from] = figure;
     
-    if(get_value(figure) == PAWN && move_to(move) == ply->en_passant)
+    if(get_value(figure) == PAWN && to == ply->en_passant)
     {
-        board[move_to(move)] = EMPTY;
-        board[move_to(move) - direction_of_pawns] =
-            create_figure(not_turn_to_move, PAWN);
+        board[to] = EMPTY;
+        board[to - direction_of_pawns] = create_figure(not_turn_to_move, PAWN);
     }
     else
-        board[move_to(move)] = move_broken(move);
+        board[to] = broken;
     
     if(get_value(figure) == KING)
     {
         int horizontal;
         if(turn_to_move == WHITE)
         {
-            place_of_white_king = move_from(move);
+            place_of_white_king = from;
             horizontal = 90;
         }
         else
         {
-            place_of_black_king = move_from(move);
+            place_of_black_king = from;
             horizontal = 20;
         }
-        if(move_from(move) - move_to(move) == 2)
+        if(from - to == 2)
         {
             board[horizontal + 1] = board[horizontal + 4];
             board[horizontal + 4] = EMPTY;
         }
-        else if(move_to(move) - move_from(move) == 2)
+        else if(to - from == 2)
         {
             board[horizontal + 8] = board[horizontal + 6];
             board[horizontal + 6] = EMPTY;
