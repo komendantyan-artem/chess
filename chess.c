@@ -242,7 +242,7 @@ void make_move(Move move)
     if(board[21] != create_figure(BLACK, ROOK))
         make_q_castling_is_incorrect();
     
-    if(broken || get_value(figure) == PAWN)
+    if(move_broken(move) || get_value(figure) == PAWN)
         ply->number_of_insignificant_plies = 0;
     else
         ply->number_of_insignificant_plies = 
