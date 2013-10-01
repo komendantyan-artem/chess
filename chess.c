@@ -529,8 +529,7 @@ int generate_moves(Move *movelist)
             int tmp = ply->en_passant - captures_of_pawns[i];
             if(board[tmp] == create_figure(turn_to_move, PAWN))
             {
-                Move tmp_move = create_move(tmp, ply->en_passant,
-                    create_figure(not_turn_to_move, PAWN), 0);
+                Move tmp_move = create_move(tmp, ply->en_passant, 0, 0);
                 make_move(tmp_move);
                 if(not_in_check(not_turn_to_move))
                 {
