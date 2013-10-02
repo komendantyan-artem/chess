@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
 typedef unsigned long long U64;
 
@@ -1190,7 +1192,7 @@ int generate_captures(Move *movelist)
     return n;
 }
 
-unsigned long long perft(depth)
+unsigned long long perft(int depth)
 {
     Move movelist[256];
     int n;
