@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+typedef unsigned long long U64;
+
 #define EMPTY  0b00000
 #define BORDER 0b00001
 #define WHITE  0b00010
@@ -57,6 +59,7 @@ struct _flags {
     int en_passant;
     int castlings;
     int number_of_insignificant_plies;
+    U64 hash;
 } begin_ply[1000], *ply;
 
 void print_position()
@@ -86,6 +89,101 @@ void print_position()
         printf("\n");
     }
     printf("\n");
+}
+
+
+typedef int Move;
+#define create_move(from, to, broken, turn) (from | (to << 7) | (broken << 14) | (turn << 19))
+#define move_from(move)   (move & 0b1111111)
+#define move_to(move)     ((move >> 7) & 0b1111111)
+#define move_broken(move) ((move >> 14) & 0b11111)
+#define move_turn(move)   ((move >> 19) & 0b11111)
+
+int history[32][120];
+void clear_history()
+{
+    int i;
+    for(i = 0; i < 32; i += 1)
+    {
+        int j;
+        for(j = 0; j < 120; j += 1)
+        {
+            history[i][j] = 0;
+        }
+    }
+}
+
+#define hash_table_size 1048575 /*(1 << 20) - 1*/
+typedef struct
+{
+    U64 hash;
+    int depth;
+    int eval;
+    Move bestmove;
+} Entry;
+Entry hash_table[hash_table_size + 1];
+
+U64 zobrist_piecesquare[32][120];
+U64 zobrist_color;
+U64 zobrist_castlings[16];
+U64 zobrist_en_passant[120];
+
+U64 rand64()
+{
+    return rand() ^ ((U64)rand() << 15) ^ ((U64)rand() << 30) ^ ((U64)rand() << 45) ^ ((U64)rand() << 60);
+}
+
+void zobrist_init()
+{
+    int i, j;
+    for(i = 0; i < 32; i += 1)
+        for(j = 0; j < 120; j += 1)
+            zobrist_piecesquare[i][j] = rand64();
+    zobrist_color = rand64();
+    for(i = 0; i < 16; i += 1)
+        zobrist_castlings[i] = rand64();
+    for(i = 0; i < 120; i += 1)
+        zobrist_en_passant[i] = rand64();
+}
+
+void hash_save_entry(int depth, int eval, Move bestmove)
+{
+    Entry *entry = &hash_table[ply->hash & hash_table_size];
+    if(!(entry->hash == ply->hash && entry->depth > depth))
+    {
+        entry->hash = ply->hash;
+        entry->depth = depth;
+        entry->eval = eval;
+        entry->bestmove = bestmove;
+    }
+}
+
+Entry* hash_get_entry()
+{
+    Entry *entry = &hash_table[ply->hash & hash_table_size];
+    if(entry->hash == ply->hash)
+        return entry;
+    return NULL;
+}
+
+
+void setup_hash_and_history()
+{
+    clear_history();
+    zobrist_init();
+    
+    ply->hash = 0;
+    if(turn_to_move == WHITE) ply->hash ^= zobrist_color;
+    int i;
+    for(i = 0; i < 64; i += 1)
+    {
+        int place = board64[i];
+        int figure = board[place];
+        if(figure != EMPTY)
+            ply->hash ^= zobrist_piecesquare[figure][place];
+    }
+    ply->hash ^= zobrist_castlings[ply->castlings];
+    ply->hash ^= zobrist_en_passant[ply->en_passant];
 }
 
 #define start_fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -139,13 +237,21 @@ void setup_position(char* fen)
                 current_cell += fen[i] - '0' - 1;
         }
     }
-    if(fen[i] == '\0') return;
+    if(fen[i] == '\0')
+    {
+        setup_hash_and_history();
+        return;
+    }
     i += 1;
     
     if(fen[i] == 'w')      turn_to_move = WHITE;
     else if(fen[i] == 'b') turn_to_move = BLACK;
     i += 1;
-    if(fen[i] == '\0') return;
+    if(fen[i] == '\0')
+    {
+        setup_hash_and_history();
+        return;
+    }
     i += 1;
     
     for(; fen[i] != ' ' && fen[i] != '\0'; i += 1)
@@ -158,7 +264,11 @@ void setup_position(char* fen)
             case 'q': ply->castlings |= q_castling; break;
         }
     }
-    if(fen[i] == '\0') return;
+    if(fen[i] == '\0')
+    {
+        setup_hash_and_history();
+        return;
+    }
     i += 1;
     
     
@@ -168,43 +278,69 @@ void setup_position(char* fen)
         ply->en_passant = ('8' - fen[i + 1] + 2) * 10 + fen[i] - 'a' + 1;
         i += 2;
     }
-    if(fen[i] == '\0') return;
+    if(fen[i] == '\0')
+    {
+        setup_hash_and_history();
+        return;
+    }
     i += 1;
     
     if(fen[i + 1] == ' ' || fen[i + 1] == '\0')
         ply->number_of_insignificant_plies = fen[i] - '0';
     else
-        ply->number_of_insignificant_plies = ((fen[i] - '0') * 10 + 
-                                                         fen[i + 1] - '0');
-    //Number of moves is not used.
+        ply->number_of_insignificant_plies = ((fen[i] - '0') * 10 + fen[i + 1] - '0');
+    
+    setup_hash_and_history();
 }
 
 
-typedef int Move;
-#define create_move(from, to, broken, turn) (from | (to << 7) | (broken << 14) | (turn << 19))
-#define move_from(move)   (move & 0b1111111)
-#define move_to(move)     ((move >> 7) & 0b1111111)
-#define move_broken(move) ((move >> 14) & 0b11111)
-#define move_turn(move)   ((move >> 19) & 0b11111)
-
 void make_move(Move move)
 {
+    U64 hash = ply->hash;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
     int from = move_from(move);
     int figure = board[from];
     int to = move_to(move);
     int turn = move_turn(move);
+    int broken = move_broken(move);
     board[from] = EMPTY;
-    board[to] = figure;
+    hash ^= zobrist_piecesquare[figure][from];
     if(turn)
+    {
         board[to] = turn;
-    if(get_value(figure) == PAWN && to == ply->en_passant)
-        board[to - direction_of_pawns] = EMPTY;
-    ply += 1;
-    if(get_value(figure) == PAWN && to - from == direction_of_pawns * 2)
-        ply->en_passant = from + direction_of_pawns;
+        hash ^= zobrist_piecesquare[turn][to];
+    }
     else
+    {
+        board[to] = figure;
+        hash ^= zobrist_piecesquare[figure][to];
+    }
+    if(get_value(figure) == PAWN && to == ply->en_passant)
+    {
+        int tmp = to - direction_of_pawns;
+        board[tmp] = EMPTY;
+        hash ^= zobrist_piecesquare[create_figure(not_turn_to_move, PAWN)][tmp];
+    }
+    else if(broken)
+    {
+        hash ^= zobrist_piecesquare[broken][to];
+    }
+    if(ply->en_passant)
+    {
+        hash ^= zobrist_en_passant[ply->en_passant];
+    }
+    
+    ply += 1;
+    
+    if(get_value(figure) == PAWN && to - from == direction_of_pawns * 2)
+    {
+        ply->en_passant = from + direction_of_pawns;
+        hash ^= zobrist_en_passant[ply->en_passant];
+    }
+    else
+    {
         ply->en_passant = 0;
+    }
     
     ply->castlings = (ply - 1)->castlings;
     if(get_value(figure) == KING)
@@ -242,12 +378,17 @@ void make_move(Move move)
     if(board[21] != create_figure(BLACK, ROOK))
         make_q_castling_is_incorrect();
     
-    if(move_broken(move) || get_value(figure) == PAWN)
+    if(broken || get_value(figure) == PAWN)
         ply->number_of_insignificant_plies = 0;
     else
         ply->number_of_insignificant_plies = 
             (ply - 1)->number_of_insignificant_plies + 1;
     turn_to_move = not_turn_to_move;
+    
+    hash ^= zobrist_color;
+    hash ^= zobrist_castlings[(ply - 1)->castlings];
+    hash ^= zobrist_castlings[ply->castlings];
+    ply->hash = hash;
 }
 
 void unmake_move(Move move)
@@ -458,8 +599,7 @@ int generate_moves(Move *movelist)
                                     
 
     int defend_against_check[120], rentgen[120][2];
-    int number_of_atackers =
-        get_rentgen_and_atackers(defend_against_check, rentgen);
+    int number_of_atackers = get_rentgen_and_atackers(defend_against_check, rentgen);
     
     int king_castling, queen_castling;
     if(turn_to_move == WHITE)
@@ -1050,12 +1190,12 @@ int generate_captures(Move *movelist)
     return n;
 }
 
-int perft(depth)
+unsigned long long perft(depth)
 {
     Move movelist[256];
     int n;
     int i;
-    int result = 0;
+    unsigned long long result = 0;
     
     if(depth == 0) return 1;
     
@@ -1071,7 +1211,7 @@ int perft(depth)
 
 #define check_perft_on_position(depth, fen) \
 setup_position(fen);\
-printf("%d\n", perft(depth))
+printf("%lld\n", perft(depth))
 
 
 
@@ -1252,21 +1392,6 @@ int evaluate()
 }
 
 
-
-int history[32][120];
-void clear_history()
-{
-    int i;
-    for(i = 0; i < 32; i += 1)
-    {
-        int j;
-        for(j = 0; j < 120; j += 1)
-        {
-            history[i][j] = 0;
-        }
-    }
-}
-
 int value_for_mvvlva(int figure)
 {
     switch(get_value(figure))
@@ -1311,6 +1436,10 @@ void sorting_captures(Move *movelist, int n)
 void sorting_moves(Move *movelist, int n)
 {
     int sorting_values[n];
+    Entry *entry = hash_get_entry();
+    Move hash_move = 0;
+    if(entry != NULL)
+        hash_move = entry->bestmove;
     int i;
     for(i = 0; i < n; i += 1)
     {
@@ -1320,6 +1449,10 @@ void sorting_moves(Move *movelist, int n)
             int figure = value_for_mvvlva(board[move_to(i_move)]);
             int broken = value_for_mvvlva(move_broken(i_move));
             sorting_values[i] = 100000*(broken * 10 - figure);
+        }
+        else if(i_move == hash_move)
+        {
+            sorting_values[i] = 10000000;
         }
         else
         {
@@ -1341,6 +1474,30 @@ void sorting_moves(Move *movelist, int n)
             j -= 1;
         }
     }
+}
+
+int is_draw_by_repetition_or_50_moves()
+{
+    int number_of_insignificant_plies = ply->number_of_insignificant_plies;
+    if(number_of_insignificant_plies == 100)
+    {
+        return 1;
+    }
+    int number_of_repetitions = 1;
+    U64 hash = ply->hash;
+    int i;
+    for(i = 1; i < number_of_insignificant_plies && (ply - i) >= begin_ply; i += 1)
+    {
+        if(hash == (ply - i)->hash)
+        {
+            number_of_repetitions += 1;
+            if(number_of_repetitions == 3)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 int quiescence(int alpha, int beta)
@@ -1376,6 +1533,8 @@ int quiescence(int alpha, int beta)
 
 int alphabeta(int alpha, int beta, int depth)
 {
+    if(is_draw_by_repetition_or_50_moves()) return DRAW;
+    
     if(depth == 0) return quiescence(alpha, beta);
     
     Move movelist[256];
@@ -1387,37 +1546,6 @@ int alphabeta(int alpha, int beta, int depth)
         return LOSING + ply - begin_ply;
     }
     sorting_moves(movelist, n);
-    int i;
-    for(i = 0; i < n; i += 1)
-    {
-        Move i_move = movelist[i];
-        make_move(i_move);
-        int score = -alphabeta(-beta, -alpha, depth - 1);
-        unmake_move(i_move);
-        
-        if(score >= beta)
-        {
-            if(!move_broken(i_move))
-            {
-                history[board[move_from(i_move)]][move_to(i_move)] = depth * depth;
-            }
-            return beta;
-        }
-        if(score > alpha)
-        {
-            alpha = score;
-        }
-    }
-    return alpha;
-}
-
-Move search(int depth)
-{
-    int alpha = -1000000, beta = 1000000;
-    Move movelist[256];
-    
-    int n = generate_moves(movelist);
-    sorting_moves(movelist, n);
     
     Move bestmove = 0;
     int i;
@@ -1428,13 +1556,31 @@ Move search(int depth)
         int score = -alphabeta(-beta, -alpha, depth - 1);
         unmake_move(i_move);
         
+        if(score >= beta)
+        {
+            hash_save_entry(depth, score, bestmove);
+            if(!move_broken(i_move))
+            {
+                history[board[move_from(i_move)]][move_to(i_move)] = depth * depth;
+            }
+            return beta;
+        }
         if(score > alpha)
         {
             bestmove = i_move;
             alpha = score;
         }
     }
-    return bestmove;
+    hash_save_entry(depth, alpha, bestmove);
+    return alpha;
+}
+
+Move iterative_search(int depth)
+{
+    int i;
+    for(i = 1; i <= depth; i += 1)
+        alphabeta(-1000000, 1000000, i);
+    return hash_get_entry()->bestmove;
 }
 
 
@@ -1462,7 +1608,7 @@ Move parse_move(char *string)
         case 'r':  turn = create_figure(turn_to_move, ROOK); break;
         case 'b':  turn = create_figure(turn_to_move, BISHOP); break;
         case 'n':  turn = create_figure(turn_to_move, KNIGHT); break;
-        default:   return 0;
+        default: return 0;
     }
     return create_move(from, to, broken, turn);
 }
@@ -1472,7 +1618,6 @@ int main()
     Move movelist[256];
     int n;
     int default_depth = 6;
-    clear_history();
     setup_position(start_fen);
     while(1)
     {
@@ -1497,7 +1642,7 @@ int main()
         }
         
         print_position();
-        Move bestmove = search(default_depth);
+        Move bestmove = iterative_search(default_depth);
         if(bestmove == 0)
             break;
         make_move(bestmove);
