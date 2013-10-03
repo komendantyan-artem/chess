@@ -1668,11 +1668,9 @@ int PVS(int alpha, int beta, int depth)
     return alpha;
 }
 
-Move iterative_search(int depth)
+Move search(int depth)
 {
-    int i;
-    for(i = 1; i <= depth; i += 1)
-        PVS(-1000000, 1000000, i);
+    PVS(-1000000, 1000000, depth);
     Entry *entry = hash_get_entry();
     if(entry != NULL) return entry->bestmove;
     return 0;
@@ -1737,7 +1735,7 @@ int main()
         }
         
         print_position();
-        Move bestmove = iterative_search(default_depth);
+        Move bestmove = search(default_depth);
         if(bestmove == 0)
             break;
         make_move(bestmove);
