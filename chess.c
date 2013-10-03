@@ -329,6 +329,23 @@ void setup_position(char* fen)
     setup_hash_and_init_arrays();
 }
 
+void make_null_move()
+{
+    turn_to_move = not_turn_to_move;
+    ply += 1;
+    ply->castlings = (ply - 1)->castlings;
+    ply->en_passant = 0;
+    ply->number_of_insignificant_plies = (ply - 1)->number_of_insignificant_plies;
+    ply->hash = (ply - 1)->hash ^ zobrist_color;
+    if((ply - 1)->en_passant)
+        ply->hash ^= zobrist_en_passant[(ply - 1)->en_passant];
+}
+
+void unmake_null_move()
+{
+    turn_to_move = not_turn_to_move;
+    ply -= 1;
+}
 
 void make_move(Move move)
 {
@@ -1554,7 +1571,48 @@ int quiescence(int alpha, int beta)
     return alpha;
 }
 
-int alphabeta(int alpha, int beta, int depth)
+int ZWS(int beta, int depth, int can_null)
+{
+    if(is_draw_by_repetition_or_50_moves()) return DRAW;
+    
+    if(depth == 0) return quiescence(beta - 1, beta);
+
+    if(depth > 2 && can_null && not_in_check(turn_to_move))
+    {
+        int R = depth > 6 ? 3: 2;
+        make_null_move();
+        int score = -ZWS(-beta + 1, depth - R - 1, 0);
+        unmake_null_move();
+        if(score >= beta) return beta;
+    }
+    
+    Move movelist[256];
+    int n = generate_moves(movelist);
+    if(n == 0)
+    {
+        if(not_in_check(turn_to_move))
+            return DRAW;
+        return LOSING + ply - begin_ply;
+    }
+    sorting_moves(movelist, n);
+    
+    int i;
+    for(i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        make_move(i_move);
+        int score = -ZWS(-beta + 1, depth - 1, can_null);
+        unmake_move(i_move);
+        
+        if(score >= beta)
+        {
+            return beta;
+        }
+    }
+    return beta - 1;
+}
+
+int PVS(int alpha, int beta, int depth)
 {
     if(is_draw_by_repetition_or_50_moves()) return DRAW;
     
@@ -1570,13 +1628,24 @@ int alphabeta(int alpha, int beta, int depth)
     }
     sorting_moves(movelist, n);
     
+    int bool_search_pv = 1;
     Move bestmove = 0;
     int i;
     for(i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
         make_move(i_move);
-        int score = -alphabeta(-beta, -alpha, depth - 1);
+        int score;
+        if(bool_search_pv)
+        {
+            score = -PVS(-beta, -alpha, depth - 1);
+        }
+        else
+        {
+            score = -ZWS(-alpha, depth - 1, 1);
+            if(score > alpha)
+                score = -PVS(-beta, -alpha, depth - 1);
+        }
         unmake_move(i_move);
         
         if(score >= beta)
@@ -1593,6 +1662,7 @@ int alphabeta(int alpha, int beta, int depth)
             bestmove = i_move;
             alpha = score;
         }
+        bool_search_pv = 0;
     }
     hash_save_entry(depth, alpha, bestmove);
     return alpha;
@@ -1602,7 +1672,7 @@ Move iterative_search(int depth)
 {
     int i;
     for(i = 1; i <= depth; i += 1)
-        alphabeta(-1000000, 1000000, i);
+        PVS(-1000000, 1000000, i);
     Entry *entry = hash_get_entry();
     if(entry != NULL) return entry->bestmove;
     return 0;
@@ -1642,7 +1712,7 @@ int main()
 {
     Move movelist[256];
     int n;
-    int default_depth = 6;
+    int default_depth = 8;
     setup_position(start_fen);
     while(1)
     {
