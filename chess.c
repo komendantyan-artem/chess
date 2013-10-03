@@ -114,6 +114,40 @@ void clear_history()
     }
 }
 
+int mvv_lva[32][32];
+void mvv_lva_init()
+{
+    int i, j;
+    for(i = 0; i < 32; i += 1)
+    {
+        int value_of_figure;
+        switch(get_value(i))
+        {
+            case KING  : value_of_figure = 0; break;
+            case PAWN  : value_of_figure = 1; break;
+            case KNIGHT: value_of_figure = 2; break;
+            case BISHOP: value_of_figure = 2; break;
+            case ROOK  : value_of_figure = 3; break;
+            case QUEEN : value_of_figure = 4; break;
+            default: value_of_figure = -1; 
+        }
+        for(j = 0; j < 32; j += 1)
+        {
+            int value_of_broken;
+            switch(get_value(j))
+            {
+                case PAWN  : value_of_broken = 10; break;
+                case KNIGHT: value_of_broken = 20; break;
+                case BISHOP: value_of_broken = 20; break;
+                case ROOK  : value_of_broken = 30; break;
+                case QUEEN : value_of_broken = 40; break;
+                default: value_of_broken = -1; 
+            }
+            mvv_lva[i][j] = 100000 * (value_of_broken - value_of_figure);
+        }
+    }
+}
+
 #define hash_table_size 1048575 /*(1 << 20) - 1*/
 typedef struct
 {
@@ -168,9 +202,10 @@ Entry* hash_get_entry()
 }
 
 
-void setup_hash_and_history()
+void setup_hash_and_init_arrays()
 {
     clear_history();
+    mvv_lva_init();
     zobrist_init();
     
     ply->hash = 0;
@@ -240,7 +275,7 @@ void setup_position(char* fen)
     }
     if(fen[i] == '\0')
     {
-        setup_hash_and_history();
+        setup_hash_and_init_arrays();
         return;
     }
     i += 1;
@@ -250,7 +285,7 @@ void setup_position(char* fen)
     i += 1;
     if(fen[i] == '\0')
     {
-        setup_hash_and_history();
+        setup_hash_and_init_arrays();
         return;
     }
     i += 1;
@@ -267,7 +302,7 @@ void setup_position(char* fen)
     }
     if(fen[i] == '\0')
     {
-        setup_hash_and_history();
+        setup_hash_and_init_arrays();
         return;
     }
     i += 1;
@@ -281,7 +316,7 @@ void setup_position(char* fen)
     }
     if(fen[i] == '\0')
     {
-        setup_hash_and_history();
+        setup_hash_and_init_arrays();
         return;
     }
     i += 1;
@@ -291,7 +326,7 @@ void setup_position(char* fen)
     else
         ply->number_of_insignificant_plies = ((fen[i] - '0') * 10 + fen[i + 1] - '0');
     
-    setup_hash_and_history();
+    setup_hash_and_init_arrays();
 }
 
 
@@ -1393,19 +1428,6 @@ int evaluate()
 }
 
 
-int value_for_mvvlva(int figure)
-{
-    switch(get_value(figure))
-    {
-        case QUEEN : return 6;
-        case ROOK  : return 5;
-        case BISHOP: return 4;
-        case KNIGHT: return 3;
-        case PAWN  : return 2;
-        default    : return 1;
-    }
-}
-
 void sorting_captures(Move *movelist, int n)
 {
     int sorting_values[n];
@@ -1413,9 +1435,9 @@ void sorting_captures(Move *movelist, int n)
     for(i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
-        int figure = value_for_mvvlva(board[move_from(i_move)]);
-        int broken = value_for_mvvlva(move_broken(i_move));
-        sorting_values[i] = broken * 10 - figure;
+        int figure = board[move_from(i_move)];
+        int broken = move_broken(i_move);
+        sorting_values[i] = mvv_lva[figure][broken];
     }
     for(i = 1; i < n; i += 1)
     {
@@ -1447,9 +1469,9 @@ void sorting_moves(Move *movelist, int n)
         Move i_move = movelist[i];
         if(move_broken(i_move))
         {
-            int figure = value_for_mvvlva(board[move_to(i_move)]);
-            int broken = value_for_mvvlva(move_broken(i_move));
-            sorting_values[i] = 100000*(broken * 10 - figure);
+            int figure = board[move_from(i_move)];
+            int broken = move_broken(i_move);
+            sorting_values[i] = mvv_lva[figure][broken];
         }
         else if(i_move == hash_move)
         {
@@ -1581,7 +1603,9 @@ Move iterative_search(int depth)
     int i;
     for(i = 1; i <= depth; i += 1)
         alphabeta(-1000000, 1000000, i);
-    return hash_get_entry()->bestmove;
+    Entry *entry = hash_get_entry();
+    if(entry != NULL) return entry->bestmove;
+    return 0;
 }
 
 
