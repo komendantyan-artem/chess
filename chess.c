@@ -65,10 +65,9 @@ struct _flags {
 
 void print_position()
 {
-    int i, j;
-    for(i = 0; i < 8; i += 1)
+    for(int i = 0; i < 8; i += 1)
     {
-        for(j = 0; j < 8; j += 1)
+        for(int j = 0; j < 8; j += 1)
         {
             switch(board[board64[i*8 + j]])
             {
@@ -103,11 +102,9 @@ typedef int Move;
 int history[32][120];
 void clear_history()
 {
-    int i;
-    for(i = 0; i < 32; i += 1)
+    for(int i = 0; i < 32; i += 1)
     {
-        int j;
-        for(j = 0; j < 120; j += 1)
+        for(int j = 0; j < 120; j += 1)
         {
             history[i][j] = 0;
         }
@@ -117,8 +114,7 @@ void clear_history()
 int mvv_lva[32][32];
 void mvv_lva_init()
 {
-    int i, j;
-    for(i = 0; i < 32; i += 1)
+    for(int i = 0; i < 32; i += 1)
     {
         int value_of_figure;
         switch(get_value(i))
@@ -131,7 +127,7 @@ void mvv_lva_init()
             case QUEEN : value_of_figure = 4; break;
             default: value_of_figure = -1; 
         }
-        for(j = 0; j < 32; j += 1)
+        for(int j = 0; j < 32; j += 1)
         {
             int value_of_broken;
             switch(get_value(j))
@@ -170,14 +166,13 @@ U64 rand64()
 
 void zobrist_init()
 {
-    int i, j;
-    for(i = 0; i < 32; i += 1)
-        for(j = 0; j < 120; j += 1)
+    for(int i = 0; i < 32; i += 1)
+        for(int j = 0; j < 120; j += 1)
             zobrist_piecesquare[i][j] = rand64();
     zobrist_color = rand64();
-    for(i = 0; i < 16; i += 1)
+    for(int i = 0; i < 16; i += 1)
         zobrist_castlings[i] = rand64();
-    for(i = 0; i < 120; i += 1)
+    for(int i = 0; i < 120; i += 1)
         zobrist_en_passant[i] = rand64();
 }
 
@@ -210,8 +205,7 @@ void setup_hash_and_init_arrays()
     
     ply->hash = 0;
     if(turn_to_move == WHITE) ply->hash ^= zobrist_color;
-    int i;
-    for(i = 0; i < 64; i += 1)
+    for(int i = 0; i < 64; i += 1)
     {
         int place = board64[i];
         int figure = board[place];
@@ -225,17 +219,16 @@ void setup_hash_and_init_arrays()
 #define start_fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 void setup_position(char* fen)
 {
-    int i, current_cell;
     ply = begin_ply;
     turn_to_move = WHITE;
     ply->en_passant = 0;
     ply->castlings = 0;
     ply->number_of_insignificant_plies = 0;
-    for(i = 0; i < 120; i += 1) board[i] = BORDER;
-    for(i = 0; i < 64; i += 1) board[board64[i]] = EMPTY;
+    for(int i = 0; i < 120; i += 1) board[i] = BORDER;
+    for(int i = 0; i < 64; i += 1) board[board64[i]] = EMPTY;
     
-    i = 0;
-    current_cell = 0;
+    int i = 0;
+    int current_cell = 0;
     for(; fen[i] != ' ' && fen[i] != '\0'; i += 1, current_cell += 1)
     {
         int index_of_figure = board64[current_cell]; 
@@ -499,16 +492,15 @@ void unmake_move(Move move)
 int get_rentgen_and_atackers
     (int defend_against_check[120], int rentgen[120][2])
 {
-    int i;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
     int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
     int place_of_king = turn_to_move == WHITE? place_of_white_king:
                                                place_of_black_king;
     int number_of_atackers = 0;
-    for(i = 0; i < 120; i += 1)
+    for(int i = 0; i < 120; i += 1)
         defend_against_check[i] = rentgen[i][0] = rentgen[i][1] = 0;
         
-    for(i = 0; i < 2; i += 1)
+    for(int i = 0; i < 2; i += 1)
     {
         int tmp = place_of_king + captures_of_pawns[i];
         if(board[tmp] == create_figure(not_turn_to_move, PAWN))
@@ -517,7 +509,7 @@ int get_rentgen_and_atackers
             defend_against_check[tmp] = 1;
         }
     }
-    for(i = 0; i < 8; i += 1)
+    for(int i = 0; i < 8; i += 1)
     {
         int tmp = place_of_king + moves_of_knight[i];
         if(board[tmp] == create_figure(not_turn_to_move, KNIGHT))
@@ -526,7 +518,7 @@ int get_rentgen_and_atackers
             defend_against_check[tmp] = 1;
         }
     }
-    for(i = 0; i < 4; i += 1)
+    for(int i = 0; i < 4; i += 1)
     {
         int inc = directions_of_bishop[i];
         int x = place_of_king + inc;
@@ -556,7 +548,7 @@ int get_rentgen_and_atackers
             }
         }
     }
-    for(i = 0; i < 4; i += 1)
+    for(int i = 0; i < 4; i += 1)
     {
         int inc = directions_of_rook[i];
         int x = place_of_king + inc;
@@ -591,31 +583,30 @@ int get_rentgen_and_atackers
 
 int not_in_check(int turn_to_move)
 {
-    int i;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
     int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
     int place_of_king = turn_to_move == WHITE? place_of_white_king:
                                                place_of_black_king;
         
-    for(i = 0; i < 2; i += 1)
+    for(int i = 0; i < 2; i += 1)
     {
         int tmp = place_of_king + captures_of_pawns[i];
         if(board[tmp] == create_figure(not_turn_to_move, PAWN))
             return 0;
     }
-    for(i = 0; i < 8; i += 1)
+    for(int i = 0; i < 8; i += 1)
     {
         int tmp = place_of_king + moves_of_king[i];
         if(board[tmp] == create_figure(not_turn_to_move, KING))
             return 0;
     }
-    for(i = 0; i < 8; i += 1)
+    for(int i = 0; i < 8; i += 1)
     {
         int tmp = place_of_king + moves_of_knight[i];
         if(board[tmp] == create_figure(not_turn_to_move, KNIGHT))
             return 0;
     }
-    for(i = 0; i < 4; i += 1)
+    for(int i = 0; i < 4; i += 1)
     {
         int inc = directions_of_bishop[i];
         int x = place_of_king + inc;
@@ -625,7 +616,7 @@ int not_in_check(int turn_to_move)
            board[x] == create_figure(not_turn_to_move, BISHOP))
                 return 0;
     }
-    for(i = 0; i < 4; i += 1)
+    for(int i = 0; i < 4; i += 1)
     {
         int inc = directions_of_rook[i];
         int x = place_of_king + inc;
@@ -640,8 +631,6 @@ int not_in_check(int turn_to_move)
 
 int generate_moves(Move *movelist)
 {
-    int i;
-    
     int horizontal2 = turn_to_move == WHITE? 8 : 3;
     int horizontal7 = turn_to_move == WHITE? 3 : 8;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
@@ -665,7 +654,7 @@ int generate_moves(Move *movelist)
         king_castling  = ply->castlings & k_castling;
         queen_castling = ply->castlings & q_castling;
     }
-    for(i = 0; i < 8; i += 1)
+    for(int i = 0; i < 8; i += 1)
     {
         int i_move = moves_of_king[i];
         int tmp = place_of_king + i_move;
@@ -717,7 +706,7 @@ int generate_moves(Move *movelist)
     
     if(ply->en_passant)
     {
-        for(i = 0; i < 2; i += 1)
+        for(int i = 0; i < 2; i += 1)
         {
             int tmp = ply->en_passant - captures_of_pawns[i];
             if(board[tmp] == create_figure(turn_to_move, PAWN))
@@ -736,8 +725,7 @@ int generate_moves(Move *movelist)
     
     if(number_of_atackers == 1)
     {
-        int i64;
-        for(i64 = 0; i64 < 64; i64 += 1)
+        for(int i64 = 0; i64 < 64; i64 += 1)
         {
             int current_cell = board64[i64];
             int figure = board[current_cell];
@@ -746,7 +734,7 @@ int generate_moves(Move *movelist)
             switch(get_value(figure))
             {
                 case QUEEN:
-                    for(i = 0; i < 8; i += 1)
+                    for(int i = 0; i < 8; i += 1)
                     {
                         int inc = directions_of_queen[i];
                         int x = current_cell + inc;
@@ -768,7 +756,7 @@ int generate_moves(Move *movelist)
                     }
                     break;
                 case ROOK:
-                    for(i = 0; i < 4; i += 1)
+                    for(int i = 0; i < 4; i += 1)
                     {
                         int inc = directions_of_rook[i];
                         int x = current_cell + inc;
@@ -790,7 +778,7 @@ int generate_moves(Move *movelist)
                     }
                     break;
                 case BISHOP:
-                    for(i = 0; i < 4; i += 1)
+                    for(int i = 0; i < 4; i += 1)
                     {
                         int inc = directions_of_bishop[i];
                         int x = current_cell + inc;
@@ -812,7 +800,7 @@ int generate_moves(Move *movelist)
                     }
                     break;
                 case KNIGHT:
-                    for(i = 0; i < 8; i += 1)
+                    for(int i = 0; i < 8; i += 1)
                     {
                         int tmp = current_cell + moves_of_knight[i];
                         if(defend_against_check[tmp] &&
@@ -832,8 +820,7 @@ int generate_moves(Move *movelist)
                         {
                             if(current_cell/10 == horizontal7)
                             {
-                                int j;
-                                for(j = 0; j < 4; j += 1)
+                                for(int j = 0; j < 4; j += 1)
                                 {
                                     movelist[n] = create_move(current_cell, tmp, 0, create_figure(turn_to_move, turn_figures[j]));
                                     n += 1;
@@ -854,7 +841,7 @@ int generate_moves(Move *movelist)
                             n += 1;
                         }
                     }
-                    for(i = 0; i < 2; i += 1)
+                    for(int i = 0; i < 2; i += 1)
                     {
                         int tmp = current_cell + captures_of_pawns[i];
                         if(defend_against_check[tmp] &&
@@ -862,8 +849,7 @@ int generate_moves(Move *movelist)
                         {
                             if(current_cell/10 == horizontal7)
                             {
-                                int j;
-                                for(j = 0; j < 4; j += 1)
+                                for(int j = 0; j < 4; j += 1)
                                 {
                                     movelist[n] = create_move(current_cell, tmp, board[tmp], create_figure(turn_to_move, turn_figures[j]));
                                     n += 1;
@@ -881,8 +867,7 @@ int generate_moves(Move *movelist)
         return n;
     }
     //if(number_of_atackers == 0)
-    int i64;
-    for(i64 = 0; i64 < 64; i64 += 1)
+    for(int i64 = 0; i64 < 64; i64 += 1)
     {
         int current_cell = board64[i64];
         int figure = board[current_cell];
@@ -891,7 +876,7 @@ int generate_moves(Move *movelist)
         switch(get_value(figure))
         {
             case QUEEN:
-                for(i = 0; i < 8; i += 1)
+                for(int i = 0; i < 8; i += 1)
                 {
                     int inc = directions_of_queen[i];
                     if(rentgen[current_cell][0] &&
@@ -913,7 +898,7 @@ int generate_moves(Move *movelist)
                 }
                 break;
             case ROOK:
-                for(i = 0; i < 4; i += 1)
+                for(int i = 0; i < 4; i += 1)
                 {
                     int inc = directions_of_rook[i];
                     if(rentgen[current_cell][0] &&
@@ -935,7 +920,7 @@ int generate_moves(Move *movelist)
                 }
                 break;
             case BISHOP:
-                for(i = 0; i < 4; i += 1)
+                for(int i = 0; i < 4; i += 1)
                 {
                     int inc = directions_of_bishop[i];
                     if(rentgen[current_cell][0] &&
@@ -959,7 +944,7 @@ int generate_moves(Move *movelist)
             case KNIGHT:
                 if(!rentgen[current_cell][0])
                 {
-                    for(i = 0; i < 8; i += 1)
+                    for(int i = 0; i < 8; i += 1)
                     {
                         int tmp = current_cell + moves_of_knight[i];
                         if(board[tmp] == EMPTY ||
@@ -979,8 +964,7 @@ int generate_moves(Move *movelist)
                 {
                     if(current_cell/10 == horizontal7)
                     {
-                        int j;
-                        for(j = 0; j < 4; j += 1)
+                        for(int j = 0; j < 4; j += 1)
                         {
                             movelist[n] = create_move(current_cell, tmp, 0, create_figure(turn_to_move, turn_figures[j]));
                             n += 1;
@@ -998,7 +982,7 @@ int generate_moves(Move *movelist)
                         n += 1;
                     }
                 }
-                for(i = 0; i < 2; i += 1)
+                for(int i = 0; i < 2; i += 1)
                 {
                     int capture = captures_of_pawns[i];
                     int tmp = current_cell + capture;
@@ -1009,8 +993,7 @@ int generate_moves(Move *movelist)
                     {
                         if(current_cell/10 == horizontal7)
                         {
-                            int j;
-                            for(j = 0; j < 4; j += 1)
+                            for(int j = 0; j < 4; j += 1)
                             {
                                 movelist[n] = create_move(current_cell, tmp, board[tmp], create_figure(turn_to_move, turn_figures[j]));
                                 n += 1;
@@ -1030,8 +1013,6 @@ int generate_moves(Move *movelist)
 
 int generate_captures(Move *movelist)
 {
-    int i;
-    
     int horizontal2 = turn_to_move == WHITE? 8 : 3;
     int horizontal7 = turn_to_move == WHITE? 3 : 8;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
@@ -1045,7 +1026,7 @@ int generate_captures(Move *movelist)
     int number_of_atackers =
         get_rentgen_and_atackers(defend_against_check, rentgen);
     
-    for(i = 0; i < 8; i += 1)
+    for(int i = 0; i < 8; i += 1)
     {
         int tmp = place_of_king + moves_of_king[i];
         if(get_color(board[tmp]) == not_turn_to_move)
@@ -1065,8 +1046,7 @@ int generate_captures(Move *movelist)
     
     if(number_of_atackers == 1)
     {
-        int i64;
-        for(i64 = 0; i64 < 64; i64 += 1)
+        for(int i64 = 0; i64 < 64; i64 += 1)
         {
             int current_cell = board64[i64];
             int figure = board[current_cell];
@@ -1075,7 +1055,7 @@ int generate_captures(Move *movelist)
             switch(get_value(figure))
             {
                 case QUEEN:
-                    for(i = 0; i < 8; i += 1)
+                    for(int i = 0; i < 8; i += 1)
                     {
                         int inc = directions_of_queen[i];
                         int x = current_cell + inc;
@@ -1090,7 +1070,7 @@ int generate_captures(Move *movelist)
                     }
                     break;
                 case ROOK:
-                    for(i = 0; i < 4; i += 1)
+                    for(int i = 0; i < 4; i += 1)
                     {
                         int inc = directions_of_rook[i];
                         int x = current_cell + inc;
@@ -1105,7 +1085,7 @@ int generate_captures(Move *movelist)
                     }
                     break;
                 case BISHOP:
-                    for(i = 0; i < 4; i += 1)
+                    for(int i = 0; i < 4; i += 1)
                     {
                         int inc = directions_of_bishop[i];
                         int x = current_cell + inc;
@@ -1120,7 +1100,7 @@ int generate_captures(Move *movelist)
                     }
                     break;
                 case KNIGHT:
-                    for(i = 0; i < 8; i += 1)
+                    for(int i = 0; i < 8; i += 1)
                     {
                         int tmp = current_cell + moves_of_knight[i];
                         if(defend_against_check[tmp] &&
@@ -1132,7 +1112,7 @@ int generate_captures(Move *movelist)
                     }
                     break;
                 case PAWN:
-                    for(i = 0; i < 2; i += 1)
+                    for(int i = 0; i < 2; i += 1)
                     {
                         int tmp = current_cell + captures_of_pawns[i];
                         if(defend_against_check[tmp] &&
@@ -1147,8 +1127,7 @@ int generate_captures(Move *movelist)
         return n;
     }
     //if(number_of_atackers == 0)
-    int i64;
-    for(i64 = 0; i64 < 64; i64 += 1)
+    for(int i64 = 0; i64 < 64; i64 += 1)
     {
         int current_cell = board64[i64];
         int figure = board[current_cell];
@@ -1157,7 +1136,7 @@ int generate_captures(Move *movelist)
         switch(get_value(figure))
         {
             case QUEEN:
-                for(i = 0; i < 8; i += 1)
+                for(int i = 0; i < 8; i += 1)
                 {
                     int inc = directions_of_queen[i];
                     if(rentgen[current_cell][0] &&
@@ -1175,7 +1154,7 @@ int generate_captures(Move *movelist)
                 }
                 break;
             case ROOK:
-                for(i = 0; i < 4; i += 1)
+                for(int i = 0; i < 4; i += 1)
                 {
                     int inc = directions_of_rook[i];
                     if(rentgen[current_cell][0] &&
@@ -1193,7 +1172,7 @@ int generate_captures(Move *movelist)
                 }
                 break;
             case BISHOP:
-                for(i = 0; i < 4; i += 1)
+                for(int i = 0; i < 4; i += 1)
                 {
                     int inc = directions_of_bishop[i];
                     if(rentgen[current_cell][0] &&
@@ -1213,7 +1192,7 @@ int generate_captures(Move *movelist)
             case KNIGHT:
                 if(!rentgen[current_cell][0])
                 {
-                    for(i = 0; i < 8; i += 1)
+                    for(int i = 0; i < 8; i += 1)
                     {
                         int tmp = current_cell + moves_of_knight[i];
                         if(get_color(board[tmp]) == not_turn_to_move)
@@ -1225,7 +1204,7 @@ int generate_captures(Move *movelist)
                 }
                 break;
             case PAWN:
-                for(i = 0; i < 2; i += 1)
+                for(int i = 0; i < 2; i += 1)
                 {
                     int capture = captures_of_pawns[i];
                     int tmp = current_cell + capture;
@@ -1247,13 +1226,12 @@ unsigned long long perft(int depth)
 {
     Move movelist[256];
     int n;
-    int i;
     unsigned long long result = 0;
     
     if(depth == 0) return 1;
     
     n = generate_moves(movelist);
-    for(i = 0; i < n; i += 1)
+    for(int i = 0; i < n; i += 1)
     {
         make_move(movelist[i]);
         result += perft(depth - 1);
@@ -1397,9 +1375,7 @@ int PST_B_PAWN[64] = {
 int evaluate()
 {
     int evaluation = 0;
-    
-    int i;
-    for(i = 0; i < 64; i += 1)
+    for(int i = 0; i < 64; i += 1)
     {
         switch(board[board64[i]])
         {
@@ -1448,15 +1424,14 @@ int evaluate()
 void sorting_captures(Move *movelist, int n)
 {
     int sorting_values[n];
-    int i;
-    for(i = 0; i < n; i += 1)
+    for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
         int figure = board[move_from(i_move)];
         int broken = move_broken(i_move);
         sorting_values[i] = mvv_lva[figure][broken];
     }
-    for(i = 1; i < n; i += 1)
+    for(int i = 1; i < n; i += 1)
     {
         int j = i;
         while(sorting_values[j] > sorting_values[j - 1] && j > 0)
@@ -1480,8 +1455,7 @@ void sorting_moves(Move *movelist, int n)
     Move hash_move = 0;
     if(entry != NULL)
         hash_move = entry->bestmove;
-    int i;
-    for(i = 0; i < n; i += 1)
+    for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
         if(move_broken(i_move))
@@ -1499,7 +1473,7 @@ void sorting_moves(Move *movelist, int n)
             sorting_values[i] = history[board[move_from(i_move)]][move_to(i_move)];
         }
     }
-    for(i = 1; i < n; i += 1)
+    for(int i = 1; i < n; i += 1)
     {
         int j = i;
         while(sorting_values[j] > sorting_values[j - 1] && j > 0)
@@ -1525,8 +1499,7 @@ int is_draw_by_repetition_or_50_moves()
     }
     int number_of_repetitions = 1;
     U64 hash = ply->hash;
-    int i;
-    for(i = 1; i < number_of_insignificant_plies && (ply - i) >= begin_ply; i += 1)
+    for(int i = 1; i < number_of_insignificant_plies && (ply - i) >= begin_ply; i += 1)
     {
         if(hash == (ply - i)->hash)
         {
@@ -1551,8 +1524,7 @@ int quiescence(int alpha, int beta)
     Move movelist[256];
     int n = generate_captures(movelist);
     sorting_captures(movelist, n);
-    int i;
-    for(i = 0; i < n; i += 1)
+    for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
         make_move(i_move);
@@ -1596,8 +1568,7 @@ int ZWS(int beta, int depth, int can_null)
     }
     sorting_moves(movelist, n);
     
-    int i;
-    for(i = 0; i < n; i += 1)
+    for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
         make_move(i_move);
@@ -1630,8 +1601,8 @@ int PVS(int alpha, int beta, int depth)
     
     int bool_search_pv = 1;
     Move bestmove = 0;
-    int i;
-    for(i = 0; i < n; i += 1)
+
+    for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
         make_move(i_move);
@@ -1682,8 +1653,7 @@ Move search(int depth)
 Move parse_move(char *string)
 {
     Move move = 0;
-    int i;
-    for(i = 0; i < 4; i += 1)
+    for(int i = 0; i < 4; i += 1)
         if(string[i] == '\0') return 0;
     if(!((string[0] >= 'a' && string[0] <= 'h') &&
          (string[1] >= '1' && string[1] <= '8') &&
@@ -1722,8 +1692,7 @@ int main()
             char string[10];
             scanf("%s", string);
             Move move = parse_move(string);
-            int i;
-            for(i = 0; i < n; i += 1)
+            for(int i = 0; i < n; i += 1)
             {
                 Move i_move = movelist[i]; 
                 if(move == i_move)
