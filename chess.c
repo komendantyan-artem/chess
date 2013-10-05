@@ -1028,33 +1028,6 @@ int evaluate()
 }
 
 
-void sorting_captures(Move *movelist, int n)
-{
-    int sorting_values[n];
-    for(int i = 0; i < n; i += 1)
-    {
-        Move i_move = movelist[i];
-        int figure = board[move_from(i_move)];
-        int broken = move_broken(i_move);
-        sorting_values[i] = mvv_lva[figure][broken];
-    }
-    for(int i = 1; i < n; i += 1)
-    {
-        int j = i;
-        while(sorting_values[j] > sorting_values[j - 1] && j > 0)
-        {
-            int tmp = sorting_values[j];
-            sorting_values[j] = sorting_values[j - 1];
-            sorting_values[j - 1] = tmp;
-            
-            Move tmp2 = movelist[j];
-            movelist[j] = movelist[j - 1];
-            movelist[j - 1] = tmp2;
-            j -= 1;
-        }
-    }
-}
-
 void sorting_moves(Move *movelist, int n)
 {
     int sorting_values[n];
@@ -1130,7 +1103,7 @@ int quiescence(int alpha, int beta)
     
     Move movelist[256];
     int n = generate_captures(movelist);
-    sorting_captures(movelist, n);
+    sorting_moves(movelist, n);
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
