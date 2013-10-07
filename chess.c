@@ -645,7 +645,7 @@ int generate_moves(Move *movelist)
                     }
                     if(get_color(board[x]) == not_turn_to_move)
                     {
-                        movelist[n] = create_move(current_cell, x, board[x], 0);;
+                        movelist[n] = create_move(current_cell, x, board[x], 0);
                         n += 1;
                     }
                 }
@@ -688,7 +688,8 @@ int generate_moves(Move *movelist)
                     {
                         for(int j = 0; j < 4; j += 1)
                         {
-                            movelist[n] = create_move(current_cell, tmp, 0, create_figure(turn_to_move, turn_figures[j]));
+                            movelist[n] = create_move(current_cell, tmp, 0,
+                                create_figure(turn_to_move, turn_figures[j]));
                             n += 1;
                         }
                     }
@@ -713,7 +714,8 @@ int generate_moves(Move *movelist)
                         {
                             for(int j = 0; j < 4; j += 1)
                             {
-                                movelist[n] = create_move(current_cell, tmp, board[tmp], create_figure(turn_to_move, turn_figures[j]));
+                                movelist[n] = create_move(current_cell, tmp, board[tmp],
+                                    create_figure(turn_to_move, turn_figures[j]));
                                 n += 1;
                             }
                         }
@@ -1028,6 +1030,33 @@ int evaluate()
 }
 
 
+void sorting_captures(Move *movelist, int n)
+{
+    int sorting_values[n];
+    for(int i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        int figure = board[move_from(i_move)];
+        int broken = move_broken(i_move);
+        sorting_values[i] = mvv_lva[figure][broken];
+    }
+    for(int i = 1; i < n; i += 1)
+    {
+        int j = i;
+        while(sorting_values[j] > sorting_values[j - 1] && j > 0)
+        {
+            int tmp = sorting_values[j];
+            sorting_values[j] = sorting_values[j - 1];
+            sorting_values[j - 1] = tmp;
+            
+            Move tmp2 = movelist[j];
+            movelist[j] = movelist[j - 1];
+            movelist[j - 1] = tmp2;
+            j -= 1;
+        }
+    }
+}
+
 void sorting_moves(Move *movelist, int n)
 {
     int sorting_values[n];
@@ -1038,15 +1067,15 @@ void sorting_moves(Move *movelist, int n)
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
-        if(move_broken(i_move))
+        if(i_move == hash_move)
+        {
+            sorting_values[i] = 10000000;
+        }
+        else if(move_broken(i_move))
         {
             int figure = board[move_from(i_move)];
             int broken = move_broken(i_move);
             sorting_values[i] = mvv_lva[figure][broken];
-        }
-        else if(i_move == hash_move)
-        {
-            sorting_values[i] = 10000000;
         }
         else
         {
@@ -1103,7 +1132,7 @@ int quiescence(int alpha, int beta)
     
     Move movelist[256];
     int n = generate_captures(movelist);
-    sorting_moves(movelist, n);
+    sorting_captures(movelist, n);
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
@@ -1276,7 +1305,7 @@ int main()
 {
     Move movelist[256];
     int n;
-    int default_depth = 8;
+    int default_depth = 9;
     setup_position(start_fen);
     while(1)
     {
