@@ -1170,12 +1170,6 @@ int ZWS(int beta, int depth, int can_null)
         unmake_null_move();
         if(score >= beta) return beta;
     }
-    if(depth < 3)
-    {
-        int evaluation = evaluate();
-        if(evaluation + 100 < beta)
-            return quiescence(beta - 1, beta);
-    }
     
     Move movelist[256];
     int n = generate_moves(movelist);
