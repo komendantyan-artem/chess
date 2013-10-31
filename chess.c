@@ -151,6 +151,7 @@ typedef struct
     int depth;
     int eval;
     Move bestmove;
+    int flag;
 } Entry;
 Entry hash_table[hash_table_size + 1];
 
@@ -176,15 +177,21 @@ void zobrist_init()
         zobrist_en_passant[i] = rand64();
 }
 
-void hash_save_entry(int depth, int eval, Move bestmove)
+#define LESS_THAN_ALPHA 0
+#define BETWEEN_ALPHA_AND_BETA 1
+#define MORE_THAN_BETA 2
+
+void hash_save_entry(int depth, int eval, Move bestmove, int flag)
 {
     Entry *entry = &hash_table[ply->hash & hash_table_size];
-    if(!(entry->hash == ply->hash && entry->depth > depth))
+    if(!(entry->hash == ply->hash && entry->depth > depth &&
+        entry->flag == BETWEEN_ALPHA_AND_BETA))
     {
         entry->hash = ply->hash;
         entry->depth = depth;
         entry->eval = eval;
         entry->bestmove = bestmove;
+        entry->flag = flag;
     }
 }
 
@@ -981,8 +988,20 @@ int PST_B_PAWN[64] = {
        0,   0,   0,   0,   0,   0,   0,   0
 };
 
-int evaluate()
+int evaluate(int alpha, int beta)
 {
+    Entry *entry = hash_get_entry();
+    if(entry != NULL)
+    {
+        int eval = entry->eval, flag = entry->flag;
+        if(flag != LESS_THAN_ALPHA && eval >= beta)
+            return beta;
+        if(flag != MORE_THAN_BETA && eval <= alpha)
+            return alpha;
+        if(flag == BETWEEN_ALPHA_AND_BETA)
+            return eval;
+    }
+    
     int evaluation = 0;
     for(int i = 0; i < 64; i += 1)
     {
@@ -1124,7 +1143,7 @@ int is_draw_by_repetition_or_50_moves()
 
 int quiescence(int alpha, int beta)
 {
-    int static_evaluation = evaluate();
+    int static_evaluation = evaluate(alpha, beta);
     if(static_evaluation >= beta)
         return beta;
     if(static_evaluation > alpha)
@@ -1160,6 +1179,16 @@ int ZWS(int beta, int depth, int can_null)
 {
     if(is_draw_by_repetition_or_50_moves()) return DRAW;
     
+    Entry *entry = hash_get_entry();
+    if(entry != NULL && entry->depth >= depth)
+    {
+        int eval = entry->eval, flag = entry->flag;
+        if(flag != LESS_THAN_ALPHA && eval >= beta)
+            return beta;
+        if(flag != MORE_THAN_BETA && eval < beta)
+            return beta - 1;
+    }
+    
     if(depth == 0) return quiescence(beta - 1, beta);
 
     if(depth > 2 && can_null && !in_check(turn_to_move))
@@ -1190,6 +1219,7 @@ int ZWS(int beta, int depth, int can_null)
         
         if(score >= beta)
         {
+            hash_save_entry(depth, beta, movelist[i], MORE_THAN_BETA);
             return beta;
         }
     }
@@ -1199,6 +1229,7 @@ int ZWS(int beta, int depth, int can_null)
             return DRAW;
         return LOSING + ply - begin_ply;
     }
+    hash_save_entry(depth, beta - 1, 0, LESS_THAN_ALPHA);
     return beta - 1;
 }
 
@@ -1240,7 +1271,7 @@ int PVS(int alpha, int beta, int depth)
         
         if(score >= beta)
         {
-            hash_save_entry(depth, score, bestmove);
+            hash_save_entry(depth, beta, bestmove, MORE_THAN_BETA);
             if(!move_broken(i_move))
             {
                 history[board[move_from(i_move)]][move_to(i_move)] = depth * depth;
@@ -1260,12 +1291,17 @@ int PVS(int alpha, int beta, int depth)
             return DRAW;
         return LOSING + ply - begin_ply;
     }
-    hash_save_entry(depth, alpha, bestmove);
+    if(bestmove != 0)
+        hash_save_entry(depth, alpha, bestmove, BETWEEN_ALPHA_AND_BETA);
+    else
+        hash_save_entry(depth, alpha, 0, LESS_THAN_ALPHA);
     return alpha;
 }
 
 Move search(int depth)
 {
+    for(int i = 1; i < depth/2; i += 1)
+        PVS(-1000000, 1000000, depth);
     PVS(-1000000, 1000000, depth);
     Entry *entry = hash_get_entry();
     if(entry != NULL) return entry->bestmove;
@@ -1277,7 +1313,6 @@ Move search(int depth)
 
 Move parse_move(char *string)
 {
-    Move move = 0;
     for(int i = 0; i < 4; i += 1)
         if(string[i] == '\0') return 0;
     if(!((string[0] >= 'a' && string[0] <= 'h') &&
@@ -1305,7 +1340,7 @@ int main()
 {
     Move movelist[256];
     int n;
-    int default_depth = 8;
+    int default_depth = 9;
     setup_position(start_fen);
     while(1)
     {
