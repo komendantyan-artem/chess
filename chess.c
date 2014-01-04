@@ -1219,7 +1219,7 @@ int ZWS(int beta, int depth, int can_null)
         
         if(score >= beta)
         {
-            hash_save_entry(depth, beta, movelist[i], MORE_THAN_BETA);
+            hash_save_entry(depth, beta, i_move, MORE_THAN_BETA);
             return beta;
         }
     }
@@ -1271,7 +1271,7 @@ int PVS(int alpha, int beta, int depth)
         
         if(score >= beta)
         {
-            hash_save_entry(depth, beta, bestmove, MORE_THAN_BETA);
+            hash_save_entry(depth, beta, i_move, MORE_THAN_BETA);
             if(!move_broken(i_move))
             {
                 history[board[move_from(i_move)]][move_to(i_move)] = depth * depth;
