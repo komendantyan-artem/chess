@@ -54,7 +54,6 @@ int board64[64] = {
 
 int board[120];
 int place_of_white_king, place_of_black_king;
-
 int turn_to_move;
 struct _flags {
     int en_passant;
