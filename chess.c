@@ -1190,7 +1190,12 @@ int ZWS(int beta, int depth, int can_null)
     }
     
     if(depth == 0) return quiescence(beta - 1, beta);
-
+    
+    if(depth <= 6 && evaluate(-300000, 300000) > beta)
+    {
+        return beta;
+    }
+    
     if(depth > 2 && can_null && !in_check(turn_to_move))
     {
         int R = depth > 6 ? 3: 2;
@@ -1300,8 +1305,6 @@ int PVS(int alpha, int beta, int depth)
 
 Move search(int depth)
 {
-    for(int i = 1; i < depth/2; i += 1)
-        PVS(-1000000, 1000000, depth);
     PVS(-1000000, 1000000, depth);
     Entry *entry = hash_get_entry();
     if(entry != NULL) return entry->bestmove;
@@ -1340,7 +1343,7 @@ int main()
 {
     Move movelist[256];
     int n;
-    int default_depth = 9;
+    int default_depth = 12;
     setup_position(start_fen);
     while(1)
     {
