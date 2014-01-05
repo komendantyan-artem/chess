@@ -1190,7 +1190,7 @@ int ZWS(int beta, int depth, int can_null)
     
     if(depth == 0) return quiescence(beta - 1, beta);
     
-    if(depth <= 6 && evaluate(-300000, 300000) > beta)
+    if(depth <= 6 && evaluate(beta - 1, beta) >= beta)
     {
         return beta;
     }
