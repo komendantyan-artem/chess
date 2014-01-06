@@ -1065,6 +1065,87 @@ int evaluate(int alpha, int beta)
 }
 
 
+int materialSEE[9] = {0, 1, 3, 3, 5, 9, 0, 0, 0};
+
+int get_smallest_atacker(int square)
+{
+    int direction_of_pawns = turn_to_move == WHITE? -10: 10;
+    int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
+    
+    for(int i = 0; i < 2; i += 1)
+    {
+        int x = square + captures_of_pawns[i];
+        if(board[x] == create_figure(turn_to_move, PAWN))
+        {
+            return x;
+        }
+    }
+    for(int i = 0; i < 8; i += 1)
+    {
+        int x = square + moves_of_knight[i];
+        if(board[x] == create_figure(turn_to_move, KNIGHT))
+        {
+            return x;
+        }
+    }
+    for(int i = 0; i < 4; i += 1)
+    {
+        int inc = directions_of_bishop[i];
+        int x = square + inc;
+        while(board[x] == EMPTY) x += inc;
+        if(board[x] == create_figure(turn_to_move, BISHOP))
+        {
+            return x;
+        }
+    }
+    for(int i = 0; i < 4; i += 1)
+    {
+        int inc = directions_of_rook[i];
+        int x = square + inc;
+        while(board[x] == EMPTY) x += inc;
+        if(board[x] == create_figure(turn_to_move, ROOK))
+        {
+            return x;
+        }
+    }
+    for(int i = 0; i < 8; i += 1)
+    {
+        int inc = directions_of_queen[i];
+        int x = square + inc;
+        while(board[x] == EMPTY) x += inc;
+        if(board[x] == create_figure(turn_to_move, QUEEN))
+        {
+            return x;
+        }
+    }
+    return 0;
+}
+
+int SEE_square(int square)
+{
+    int value = 0;
+    int from = get_smallest_atacker(square);
+    if(from)
+    {
+        int material = materialSEE[board[from] >> 2];
+        Move move = create_move(from, square, board[square], 0);
+        make_move(move);
+        value = material - SEE_square(square);
+        if(value < 0) value = 0;
+        unmake_move(move);
+    }
+    return value;
+}
+
+int SEE(Move move)
+{
+    int material = materialSEE[board[move_from(move)] >> 2];
+    make_move(move);
+    int value = material - SEE_square(move_to(move));
+    unmake_move(move);
+    return value;
+}
+
 void sorting_captures(Move *movelist, int n)
 {
     int sorting_values[n];
@@ -1142,6 +1223,7 @@ int sorting_moves_with_LMR(Move *movelist, int n)
     if(entry != NULL)
         hash_move = entry->bestmove;
     int number_of_noncapture_moves = 0;
+    int number_of_bad_captures = 0;
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
@@ -1151,9 +1233,9 @@ int sorting_moves_with_LMR(Move *movelist, int n)
         }
         else if(move_broken(i_move))
         {
-            int figure = board[move_from(i_move)];
-            int broken = move_broken(i_move);
-            sorting_values[i] = mvv_lva[figure][broken];
+            int score = SEE(i_move);
+            if(score < 0) number_of_bad_captures += 1;
+            sorting_values[i] = score * 100000;
         }
         else
         {
@@ -1178,8 +1260,8 @@ int sorting_moves_with_LMR(Move *movelist, int n)
         }
     }
     if(number_of_noncapture_moves < 4)
-        return n;
-    return n - number_of_noncapture_moves + 3;
+        return n - number_of_bad_captures;
+    return n - number_of_bad_captures - number_of_noncapture_moves + 3;
 }
 
 int is_draw_by_repetition_or_50_moves()
