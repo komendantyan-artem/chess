@@ -1134,6 +1134,54 @@ void sorting_moves(Move *movelist, int n)
     }
 }
 
+int sorting_moves_with_LMR(Move *movelist, int n)
+{
+    int sorting_values[n];
+    Entry *entry = hash_get_entry();
+    Move hash_move = 0;
+    if(entry != NULL)
+        hash_move = entry->bestmove;
+    int number_of_noncapture_moves = 0;
+    for(int i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        if(i_move == hash_move)
+        {
+            sorting_values[i] = 10000000;
+        }
+        else if(move_broken(i_move))
+        {
+            int figure = board[move_from(i_move)];
+            int broken = move_broken(i_move);
+            sorting_values[i] = mvv_lva[figure][broken];
+        }
+        else
+        {
+            sorting_values[i] = history[board[move_from(i_move)]][move_to(i_move)];
+            number_of_noncapture_moves += 1;
+        }
+    }
+    
+    for(int i = 1; i < n; i += 1)
+    {
+        int j = i;
+        while(sorting_values[j] > sorting_values[j - 1] && j > 0)
+        {
+            int tmp = sorting_values[j];
+            sorting_values[j] = sorting_values[j - 1];
+            sorting_values[j - 1] = tmp;
+            
+            Move tmp2 = movelist[j];
+            movelist[j] = movelist[j - 1];
+            movelist[j - 1] = tmp2;
+            j -= 1;
+        }
+    }
+    if(number_of_noncapture_moves < 4)
+        return n;
+    return n - number_of_noncapture_moves + 3;
+}
+
 int is_draw_by_repetition_or_50_moves()
 {
     int number_of_insignificant_plies = ply->number_of_insignificant_plies;
@@ -1187,7 +1235,7 @@ int quiescence(int alpha, int beta)
     return alpha;
 }
 
-int ZWS(int beta, int depth, int can_null)
+int ZWS(int beta, int depth, int can_reduce)
 {
     if(is_draw_by_repetition_or_50_moves()) return DRAW;
     
@@ -1208,7 +1256,7 @@ int ZWS(int beta, int depth, int can_null)
         return beta;
     }
     
-    if(depth > 2 && can_null && !in_check(turn_to_move))
+    if(depth > 2 && can_reduce && !in_check(turn_to_move))
     {
         int R = depth > 6 ? 3: 2;
         make_null_move();
@@ -1225,13 +1273,18 @@ int ZWS(int beta, int depth, int can_null)
             return DRAW;
         return LOSING + ply - begin_ply;
     }
-    sorting_moves(movelist, n);
-    
+    int reducing = sorting_moves_with_LMR(movelist, n);
+    int reduce_value = depth / 3;
     for(int i = 0; i < n; i += 1)
     {
+        if(reducing == i && can_reduce)
+        {
+            depth -= reduce_value;
+            can_reduce = 0;
+        }
         Move i_move = movelist[i];
         make_move(i_move);
-        int score = -ZWS(-beta + 1, depth - 1, can_null);
+        int score = -ZWS(-beta + 1, depth - 1, can_reduce);
         unmake_move(i_move);
         
         if(score >= beta)
@@ -1343,7 +1396,7 @@ int main()
 {
     Move movelist[256];
     int n;
-    int default_depth = 12;
+    int default_depth = 14;
     setup_position(start_fen);
     while(1)
     {
