@@ -394,7 +394,7 @@ int in_check(int turn_to_move)
     return 0;
 }
 
-int make_move(Move move)
+void make_move(Move move)
 {
     U64 hash = ply->hash;
     int direction_of_pawns = turn_to_move == WHITE? -10: 10;
@@ -489,9 +489,6 @@ int make_move(Move move)
     hash ^= zobrist_castlings[(ply - 1)->castlings];
     hash ^= zobrist_castlings[ply->castlings];
     ply->hash = hash;
-    if(in_check(not_turn_to_move))
-        return 0;
-    return 1;
 }
 
 void unmake_move(Move move)
@@ -734,6 +731,18 @@ int generate_moves(Move *movelist)
                 }
         }
     }
+    for(int i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        make_move(i_move);
+        if(in_check(not_turn_to_move))
+        {
+            movelist[i] = movelist[n - 1];
+            n -= 1;
+            i -= 1;
+        }
+        unmake_move(i_move);
+    }
     return n;
 }
 
@@ -829,6 +838,18 @@ int generate_captures(Move *movelist)
                 }
         }
     }
+    for(int i = 0; i < n; i += 1)
+    {
+        Move i_move = movelist[i];
+        make_move(i_move);
+        if(in_check(not_turn_to_move))
+        {
+            movelist[i] = movelist[n - 1];
+            n -= 1;
+            i -= 1;
+        }
+        unmake_move(i_move);
+    }
     return n;
 }
 
@@ -844,11 +865,7 @@ U64 perft(int depth)
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
-        if(!make_move(i_move))
-        {
-            unmake_move(i_move);
-            continue;
-        }
+        make_move(i_move);
         result += perft(depth - 1);
         unmake_move(i_move);
     }
@@ -1154,11 +1171,7 @@ int quiescence(int alpha, int beta)
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
-        if(!make_move(i_move))
-        {
-            unmake_move(i_move);
-            continue;
-        }
+        make_move(i_move);
         int score = -quiescence(-beta, -alpha);
         unmake_move(i_move);
         
@@ -1206,18 +1219,18 @@ int ZWS(int beta, int depth, int can_null)
     
     Move movelist[256];
     int n = generate_moves(movelist);
+    if(n == 0)
+    {
+        if(!in_check(turn_to_move))
+            return DRAW;
+        return LOSING + ply - begin_ply;
+    }
     sorting_moves(movelist, n);
     
-    int no_moves = 1;
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
-        if(!make_move(i_move))
-        {
-            unmake_move(i_move);
-            continue;
-        }
-        no_moves = 0;
+        make_move(i_move);
         int score = -ZWS(-beta + 1, depth - 1, can_null);
         unmake_move(i_move);
         
@@ -1226,12 +1239,6 @@ int ZWS(int beta, int depth, int can_null)
             hash_save_entry(depth, beta, i_move, MORE_THAN_BETA);
             return beta;
         }
-    }
-    if(no_moves)
-    {
-        if(!in_check(turn_to_move))
-            return DRAW;
-        return LOSING + ply - begin_ply;
     }
     hash_save_entry(depth, beta - 1, 0, LESS_THAN_ALPHA);
     return beta - 1;
@@ -1245,21 +1252,21 @@ int PVS(int alpha, int beta, int depth)
     
     Move movelist[256];
     int n = generate_moves(movelist);
+    if(n == 0)
+    {
+        if(!in_check(turn_to_move))
+            return DRAW;
+        return LOSING + ply - begin_ply;
+    }
     sorting_moves(movelist, n);
     
-    int no_moves = 1;
     int bool_search_pv = 1;
     Move bestmove = 0;
 
     for(int i = 0; i < n; i += 1)
     {
         Move i_move = movelist[i];
-        if(!make_move(i_move))
-        {
-            unmake_move(i_move);
-            continue;
-        }
-        no_moves = 0;
+        make_move(i_move);
         int score;
         if(bool_search_pv)
         {
@@ -1288,12 +1295,6 @@ int PVS(int alpha, int beta, int depth)
             alpha = score;
         }
         bool_search_pv = 0;
-    }
-    if(no_moves)
-    {
-        if(!in_check(turn_to_move))
-            return DRAW;
-        return LOSING + ply - begin_ply;
     }
     if(bestmove != 0)
         hash_save_entry(depth, alpha, bestmove, BETWEEN_ALPHA_AND_BETA);
