@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef unsigned long long U64;
 
@@ -1065,87 +1066,6 @@ int evaluate(int alpha, int beta)
 }
 
 
-int materialSEE[9] = {0, 1, 3, 3, 5, 9, 0, 0, 0};
-
-int get_smallest_atacker(int square)
-{
-    int direction_of_pawns = turn_to_move == WHITE? -10: 10;
-    int captures_of_pawns[2] = {direction_of_pawns + 1, direction_of_pawns - 1};
-    
-    for(int i = 0; i < 2; i += 1)
-    {
-        int x = square + captures_of_pawns[i];
-        if(board[x] == create_figure(turn_to_move, PAWN))
-        {
-            return x;
-        }
-    }
-    for(int i = 0; i < 8; i += 1)
-    {
-        int x = square + moves_of_knight[i];
-        if(board[x] == create_figure(turn_to_move, KNIGHT))
-        {
-            return x;
-        }
-    }
-    for(int i = 0; i < 4; i += 1)
-    {
-        int inc = directions_of_bishop[i];
-        int x = square + inc;
-        while(board[x] == EMPTY) x += inc;
-        if(board[x] == create_figure(turn_to_move, BISHOP))
-        {
-            return x;
-        }
-    }
-    for(int i = 0; i < 4; i += 1)
-    {
-        int inc = directions_of_rook[i];
-        int x = square + inc;
-        while(board[x] == EMPTY) x += inc;
-        if(board[x] == create_figure(turn_to_move, ROOK))
-        {
-            return x;
-        }
-    }
-    for(int i = 0; i < 8; i += 1)
-    {
-        int inc = directions_of_queen[i];
-        int x = square + inc;
-        while(board[x] == EMPTY) x += inc;
-        if(board[x] == create_figure(turn_to_move, QUEEN))
-        {
-            return x;
-        }
-    }
-    return 0;
-}
-
-int SEE_square(int square)
-{
-    int value = 0;
-    int from = get_smallest_atacker(square);
-    if(from)
-    {
-        int material = materialSEE[board[from] >> 2];
-        Move move = create_move(from, square, board[square], 0);
-        make_move(move);
-        value = material - SEE_square(square);
-        if(value < 0) value = 0;
-        unmake_move(move);
-    }
-    return value;
-}
-
-int SEE(Move move)
-{
-    int material = materialSEE[board[move_from(move)] >> 2];
-    make_move(move);
-    int value = material - SEE_square(move_to(move));
-    unmake_move(move);
-    return value;
-}
-
 void sorting_captures(Move *movelist, int n)
 {
     int sorting_values[n];
@@ -1215,54 +1135,6 @@ void sorting_moves(Move *movelist, int n)
     }
 }
 
-int sorting_moves_with_LMR(Move *movelist, int n)
-{
-    int sorting_values[n];
-    Entry *entry = hash_get_entry();
-    Move hash_move = 0;
-    if(entry != NULL)
-        hash_move = entry->bestmove;
-    int number_of_noncapture_moves = 0;
-    int number_of_bad_captures = 0;
-    for(int i = 0; i < n; i += 1)
-    {
-        Move i_move = movelist[i];
-        if(i_move == hash_move)
-        {
-            sorting_values[i] = 10000000;
-        }
-        else if(move_broken(i_move))
-        {
-            int score = SEE(i_move);
-            if(score < 0) number_of_bad_captures += 1;
-            sorting_values[i] = score * 100000;
-        }
-        else
-        {
-            sorting_values[i] = history[board[move_from(i_move)]][move_to(i_move)];
-            number_of_noncapture_moves += 1;
-        }
-    }
-    
-    for(int i = 1; i < n; i += 1)
-    {
-        int j = i;
-        while(sorting_values[j] > sorting_values[j - 1] && j > 0)
-        {
-            int tmp = sorting_values[j];
-            sorting_values[j] = sorting_values[j - 1];
-            sorting_values[j - 1] = tmp;
-            
-            Move tmp2 = movelist[j];
-            movelist[j] = movelist[j - 1];
-            movelist[j - 1] = tmp2;
-            j -= 1;
-        }
-    }
-    if(number_of_noncapture_moves < 4)
-        return n - number_of_bad_captures;
-    return n - number_of_bad_captures - number_of_noncapture_moves + 3;
-}
 
 int is_draw_by_repetition_or_50_moves()
 {
@@ -1355,15 +1227,9 @@ int ZWS(int beta, int depth, int can_reduce)
             return DRAW;
         return LOSING + ply - begin_ply;
     }
-    int reducing = sorting_moves_with_LMR(movelist, n);
-    int reduce_value = depth / 3;
+    sorting_moves(movelist, n);
     for(int i = 0; i < n; i += 1)
     {
-        if(reducing == i && can_reduce)
-        {
-            depth -= reduce_value;
-            can_reduce = 0;
-        }
         Move i_move = movelist[i];
         make_move(i_move);
         int score = -ZWS(-beta + 1, depth - 1, can_reduce);
@@ -1447,9 +1313,7 @@ Move search(int depth)
 }
 
 
-//game with engine
-
-Move parse_move(char *string)
+Move str_to_move(char *string)
 {
     for(int i = 0; i < 4; i += 1)
         if(string[i] == '\0') return 0;
@@ -1461,51 +1325,111 @@ Move parse_move(char *string)
     int from = ('8' - string[1] + 2) * 10 + (string[0] - 'a' + 1);
     int to   = ('8' - string[3] + 2) * 10 + (string[2] - 'a' + 1);
     int broken = board[to];
-    int turn;
+    int turn = 0;
     switch(string[4])
     {
-        case '\0': turn = 0; break;
         case 'q':  turn = create_figure(turn_to_move, QUEEN); break;
         case 'r':  turn = create_figure(turn_to_move, ROOK); break;
         case 'b':  turn = create_figure(turn_to_move, BISHOP); break;
         case 'n':  turn = create_figure(turn_to_move, KNIGHT); break;
-        default: return 0;
     }
     return create_move(from, to, broken, turn);
 }
 
-int main()
+
+void move_to_str(Move move, char *string)
 {
-    Move movelist[256];
-    int n;
-    int default_depth = 14;
-    setup_position(start_fen);
+    int from = move_from(move);
+    int to = move_to(move);
+    int turn = move_turn(move);
+    string[0] = (from % 10) - 1 + 'a';
+    string[1] = 9 - (from / 10) + '1';
+    string[2] = (to % 10) - 1 + 'a';
+    string[3] = 9 - (to / 10) + '1';
+    switch(get_value(turn))
+    {
+        case QUEEN : string[4] = 'q'; break;
+        case ROOK  : string[4] = 'r'; break;
+        case BISHOP: string[4] = 'b'; break;
+        case KNIGHT: string[4] = 'n'; break;
+        default:     string[4] = '\0';
+    }
+    string[5] = '\0';
+}
+
+void UCI()
+{
+    char str[8192];
+    char *p;
+    
+    printf("id name NAME\n");
+    printf("id author NAME\n");
+    //option
+    printf("uciok\n");
+    fflush(stdout);
+    
     while(1)
     {
-        print_position();
-        n = generate_moves(movelist);
-        int flag = 1;
-        while(flag)
+        gets(str);
+        p = strtok(str, " ");
+        if(!p)
         {
-            char string[10];
-            scanf("%s", string);
-            Move move = parse_move(string);
-            for(int i = 0; i < n; i += 1)
-            {
-                Move i_move = movelist[i]; 
-                if(move == i_move)
-                {
-                    make_move(move);
-                    flag = 0;
-                }
-            }
+            continue;
         }
-        
-        print_position();
-        Move bestmove = search(default_depth);
-        if(bestmove == 0)
-            break;
-        make_move(bestmove);
+        else if(!strcmp(p, "quit"))
+        {
+            return;
+        }
+        else if(!strcmp(p, "isready"))
+        {
+            printf("readyok\n");
+            fflush(stdout);
+        }
+        else if(!strcmp(p, "position"))
+        {
+            p = strtok(0, " ");
+            if(!strcmp(p, "fen"))
+			{
+				p = strtok(0, "m");
+				setup_position(p);
+			}
+            else
+            {
+                setup_position(start_fen);
+            }
+            if (p = strtok(0, " "))
+			{
+				while(p = strtok(0, " "))
+				{
+					Move m = str_to_move(p);
+					make_move(m);
+				}
+			}
+        }
+        else if(!strcmp(p, "go"))
+        {
+            int depth_limit = 12;
+            while (p = strtok(0, " "))
+			{
+                if(!strcmp(p, "depth"))
+				{
+					p = strtok(0, " ");
+					depth_limit = atoi(p);
+				}
+            }
+            Move move = search(depth_limit);
+            char tmp[6];
+            move_to_str(move, tmp);
+            sprintf(str, "bestmove %s\n", tmp);
+            printf(str);
+            fflush(stdout);
+        }
     }
+}
+
+
+int main()
+{
+    UCI();
     return 0;
 }
