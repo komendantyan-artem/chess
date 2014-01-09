@@ -42,15 +42,80 @@ int directions_of_queen[8]  = {1, 10, -1, -10, 9, 11, -9, -11};
 int moves_of_king[8]        = {1, 10, -1, -10, 9, 11, -9, -11};
 int moves_of_knight[8]      = {21, 19, 12, 8, -21, -19, -12, -8};
 
+#define A1 91
+#define B1 92
+#define C1 93
+#define D1 94
+#define E1 95
+#define F1 96
+#define G1 97
+#define H1 98
+#define A2 81
+#define B2 82
+#define C2 83
+#define D2 84
+#define E2 85
+#define F2 86
+#define G2 87
+#define H2 88
+#define A3 71
+#define B3 72
+#define C3 73
+#define D3 74
+#define E3 75
+#define F3 76
+#define G3 77
+#define H3 78
+#define A4 61
+#define B4 62
+#define C4 63
+#define D4 64
+#define E4 65
+#define F4 66
+#define G4 67
+#define H4 68
+#define A5 51
+#define B5 52
+#define C5 53
+#define D5 54
+#define E5 55
+#define F5 56
+#define G5 57
+#define H5 58
+#define A6 41
+#define B6 42
+#define C6 43
+#define D6 44
+#define E6 45
+#define F6 46
+#define G6 47
+#define H6 48
+#define A7 31
+#define B7 32
+#define C7 33
+#define D7 34
+#define E7 35
+#define F7 36
+#define G7 37
+#define H7 38
+#define A8 21
+#define B8 22
+#define C8 23
+#define D8 24
+#define E8 25
+#define F8 26
+#define G8 27
+#define H8 28
+
 int board64[64] = {
-    21,22,23,24,25,26,27,28,
-    31,32,33,34,35,36,37,38,
-    41,42,43,44,45,46,47,48,
-    51,52,53,54,55,56,57,58,
-    61,62,63,64,65,66,67,68,
-    71,72,73,74,75,76,77,78,
-    81,82,83,84,85,86,87,88,
-    91,92,93,94,95,96,97,98
+    A8, B8, C8, D8, E8, F8, G8, H8,
+    A7, B7, C7, D7, E7, F7, G7, H7,
+    A6, B6, C6, D6, E6, F6, G6, H6,
+    A5, B5, C5, D5, E5, F5, G5, H5,
+    A4, B4, C4, D4, E4, F4, G4, H4,
+    A3, B3, C3, D3, E3, F3, G3, H3,
+    A2, B2, C2, D2, E2, F2, G2, H2,
+    A1, B1, C1, D1, E1, F1, G1, H1,
 };
 
 int board[120];
@@ -99,61 +164,6 @@ typedef int Move;
 #define move_broken(move) ((move >> 14) & 0b11111)
 #define move_turn(move)   ((move >> 19) & 0b11111)
 
-int history[32][120];
-void clear_history()
-{
-    for(int i = 0; i < 32; i += 1)
-    {
-        for(int j = 0; j < 120; j += 1)
-        {
-            history[i][j] = 0;
-        }
-    }
-}
-
-int mvv_lva[32][32];
-void mvv_lva_init()
-{
-    for(int i = 0; i < 32; i += 1)
-    {
-        int value_of_figure;
-        switch(get_value(i))
-        {
-            case KING  : value_of_figure = 0; break;
-            case PAWN  : value_of_figure = 1; break;
-            case KNIGHT: value_of_figure = 2; break;
-            case BISHOP: value_of_figure = 2; break;
-            case ROOK  : value_of_figure = 3; break;
-            case QUEEN : value_of_figure = 4; break;
-            default: value_of_figure = -1; 
-        }
-        for(int j = 0; j < 32; j += 1)
-        {
-            int value_of_broken;
-            switch(get_value(j))
-            {
-                case PAWN  : value_of_broken = 10; break;
-                case KNIGHT: value_of_broken = 20; break;
-                case BISHOP: value_of_broken = 20; break;
-                case ROOK  : value_of_broken = 30; break;
-                case QUEEN : value_of_broken = 40; break;
-                default: value_of_broken = -1; 
-            }
-            mvv_lva[i][j] = 100000 * (value_of_broken - value_of_figure);
-        }
-    }
-}
-
-#define hash_table_size 1048575 /*(1 << 20) - 1*/
-typedef struct
-{
-    U64 hash;
-    int depth;
-    int eval;
-    Move bestmove;
-    int flag;
-} Entry;
-Entry hash_table[hash_table_size + 1];
 
 U64 zobrist_piecesquare[32][120];
 U64 zobrist_color;
@@ -176,6 +186,18 @@ void zobrist_init()
     for(int i = 0; i < 120; i += 1)
         zobrist_en_passant[i] = rand64();
 }
+
+
+#define hash_table_size 1048575 /*(1 << 20) - 1*/
+typedef struct
+{
+    U64 hash;
+    int depth;
+    int eval;
+    Move bestmove;
+    int flag;
+} Entry;
+Entry hash_table[hash_table_size + 1];
 
 #define LESS_THAN_ALPHA 0
 #define BETWEEN_ALPHA_AND_BETA 1
@@ -203,13 +225,8 @@ Entry* hash_get_entry()
     return NULL;
 }
 
-
-void setup_hash_and_init_arrays()
+void setup_hash()
 {
-    clear_history();
-    mvv_lva_init();
-    zobrist_init();
-    
     ply->hash = 0;
     if(turn_to_move == WHITE) ply->hash ^= zobrist_color;
     for(int i = 0; i < 64; i += 1)
@@ -275,7 +292,7 @@ void setup_position(char* fen)
     }
     if(fen[i] == '\0')
     {
-        setup_hash_and_init_arrays();
+        setup_hash();
         return;
     }
     i += 1;
@@ -285,7 +302,7 @@ void setup_position(char* fen)
     i += 1;
     if(fen[i] == '\0')
     {
-        setup_hash_and_init_arrays();
+        setup_hash();
         return;
     }
     i += 1;
@@ -302,7 +319,7 @@ void setup_position(char* fen)
     }
     if(fen[i] == '\0')
     {
-        setup_hash_and_init_arrays();
+        setup_hash();
         return;
     }
     i += 1;
@@ -316,7 +333,7 @@ void setup_position(char* fen)
     }
     if(fen[i] == '\0')
     {
-        setup_hash_and_init_arrays();
+        setup_hash();
         return;
     }
     i += 1;
@@ -326,7 +343,7 @@ void setup_position(char* fen)
     else
         ply->number_of_insignificant_plies = ((fen[i] - '0') * 10 + fen[i + 1] - '0');
     
-    setup_hash_and_init_arrays();
+    setup_hash();
 }
 
 void make_null_move()
@@ -882,9 +899,66 @@ printf("%lld\n", perft(depth))
 
 //Now all piece-square tables and material are from
 //  http://chessprogramming.wikispaces.com/Simplified+evaluation+function
-//Material Q: 900, R: 500, B: 330, N: 320, P: 100
 
-int PST_W_KING[64] = {
+int material[7] = {-1, 100, 300, 300, 500, 900, 0};
+
+#define get_material_value(color, value) (color == WHITE ? material[value >> 2]:\
+                                                          -material[value >> 2])
+
+#define MAX_FIGURE_MATERIAL 3100
+
+int PST_QUEEN[64] = {
+    -20,-10,-10, -5, -5,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5,  5,  5,  5,  0,-10,
+     -5,  0,  5,  5,  5,  5,  0, -5,
+      0,  0,  5,  5,  5,  5,  0, -5,
+    -10,  5,  5,  5,  5,  5,  0,-10,
+    -10,  0,  5,  0,  0,  0,  0,-10,
+    -20,-10,-10, -5, -5,-10,-10,-20
+};
+int PST_ROOK[64] = {
+      0,  0,  0,  0,  0,  0,  0,  0,
+      5, 10, 10, 10, 10, 10, 10,  5,
+     -5,  0,  0,  0,  0,  0,  0, -5,
+     -5,  0,  0,  0,  0,  0,  0, -5,
+     -5,  0,  0,  0,  0,  0,  0, -5,
+     -5,  0,  0,  0,  0,  0,  0, -5,
+     -5,  0,  0,  0,  0,  0,  0, -5,
+      0,  0,  0,  5,  5,  0,  0,  0
+};
+int PST_BISHOP[64] = {
+    -20,-10,-10,-10,-10,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5, 10, 10,  5,  0,-10,
+    -10,  5,  5, 10, 10,  5,  5,-10,
+    -10,  0, 10, 10, 10, 10,  0,-10,
+    -10, 10, 10, 10, 10, 10, 10,-10,
+    -10,  5,  0,  0,  0,  0,  5,-10,
+    -20,-10,-10,-10,-10,-10,-10,-20,
+};
+int PST_KNIGHT[64] = {
+    -50,-40,-30,-30,-30,-30,-40,-50,
+    -40,-20,  0,  0,  0,  0,-20,-40,
+    -30,  0, 10, 15, 15, 10,  0,-30,
+    -30,  5, 15, 20, 20, 15,  5,-30,
+    -30,  0, 15, 20, 20, 15,  0,-30,
+    -30,  5, 10, 15, 15, 10,  5,-30,
+    -40,-20,  0,  5,  5,  0,-20,-40,
+    -50,-40,-30,-30,-30,-30,-40,-50,
+};
+int PST_PAWN[64] = {
+     0,  0,  0,  0,  0,  0,  0,  0,
+    50, 50, 50, 50, 50, 50, 50, 50,
+    10, 10, 20, 30, 30, 20, 10, 10,
+     5,  5, 10, 25, 25, 10,  5,  5,
+     0,  0,  0, 20, 20,  0,  0,  0,
+     5, -5,-10,  0,  0,-10, -5,  5,
+     5, 10, 10,-20,-20, 10, 10,  5,
+     0,  0,  0,  0,  0,  0,  0,  0,
+};
+
+int PST_KING[64] = {
     -30,-40,-40,-50,-50,-40,-40,-30,
     -30,-40,-40,-50,-50,-40,-40,-30,
     -30,-40,-40,-50,-50,-40,-40,-30,
@@ -894,116 +968,81 @@ int PST_W_KING[64] = {
      20, 20,  0,  0,  0,  0, 20, 20,
      20, 30, 10,  0,  0, 10, 30, 20
 };
-int PST_W_QUEEN[64] = {
-    880,890,890,895,895,890,890,880,
-    890,900,900,900,900,900,900,890,
-    890,900,905,905,905,905,900,890,
-    895,900,905,905,905,905,900,895,
-    900,900,905,905,905,905,900,895,
-    890,905,905,905,905,905,900,890,
-    890,900,905,900,900,900,900,890,
-    880,890,890,895,895,890,890,880
+int PST_KING_end[64] = {
+    -50,-40,-30,-20,-20,-30,-40,-50,
+    -30,-20,-10,  0,  0,-10,-20,-30,
+    -30,-10, 20, 30, 30, 20,-10,-30,
+    -30,-10, 30, 40, 40, 30,-10,-30,
+    -30,-10, 30, 40, 40, 30,-10,-30,
+    -30,-10, 20, 30, 30, 20,-10,-30,
+    -30,-30,  0,  0,  0,  0,-30,-30,
+    -50,-30,-30,-30,-30,-30,-30,-50
 };
-int PST_W_ROOK[64] = {
-    500,500,500,500,500,500,500,500,
-    505,510,510,510,510,510,510,505,
-    495,500,500,500,500,500,500,495,
-    495,500,500,500,500,500,500,495,
-    495,500,500,500,500,500,500,495,
-    495,500,500,500,500,500,500,495,
-    495,500,500,500,500,500,500,495,
-    500,500,500,505,505,500,500,500
+
+int reversed64[64] = {
+    57,58,59,60,61,62,63,64,
+    49,50,51,52,53,54,55,56,
+    41,42,43,44,45,46,47,48,
+    33,34,35,36,37,38,39,40,
+    25,26,27,28,29,30,31,32,
+    17,18,19,20,21,22,23,24,
+     9,10,11,12,13,14,15,16,
+     1, 2, 3, 4, 5, 6, 7, 8,
 };
-int PST_W_BISHOP[64] = {
-    310,320,320,320,320,320,320,310,
-    320,330,330,330,330,330,330,320,
-    320,330,335,340,340,335,330,320,
-    320,335,335,340,340,335,335,320,
-    320,330,340,340,340,340,330,320,
-    320,340,340,340,340,340,340,320,
-    320,335,330,330,330,330,335,320,
-    310,320,320,320,320,320,320,310
-};
-int PST_W_KNIGHT[64] = {
-    270,280,290,290,290,290,280,270,
-    280,300,320,320,320,320,300,280,
-    290,320,330,335,335,330,320,290,
-    290,325,335,340,340,335,325,290,
-    290,320,335,340,340,335,320,290,
-    290,325,330,335,335,330,325,290,
-    280,300,320,325,325,320,300,280,
-    270,280,290,290,290,290,280,270
-};
-int PST_W_PAWN[64] = {
-      0,  0,  0,  0,  0,  0,  0,  0,
-    150,150,150,150,150,150,150,150,
-    110,110,120,130,130,120,110,110,
-    105,105,110,125,125,110,105,105,
-    100,100,100,120,120,100,100,100,
-    105, 95, 90,100,100, 90, 95,105,
-    105,110,110, 80, 80,110,110,105,
-      0,  0,  0,  0,  0,  0,  0,  0,
-};
-int PST_B_KING[64] = {
-   -20,-30,-10,  0,  0,-10,-30,-20,
-   -20,-20,  0,  0,  0,  0,-20,-20,
-    10, 20, 20, 20, 20, 20, 20, 10,
-    20, 30, 30, 40, 40, 30, 30, 20,
-    30, 40, 40, 50, 50, 40, 40, 30,
-    30, 40, 40, 50, 50, 40, 40, 30,
-    30, 40, 40, 50, 50, 40, 40, 30,
-    30, 40, 40, 50, 50, 40, 40, 30
-};
-int PST_B_QUEEN[64] = {
-    -880,-890,-890,-895,-895,-890,-890,-880,
-    -890,-900,-900,-900,-900,-905,-900,-890,
-    -890,-900,-905,-905,-905,-905,-905,-890,
-    -895,-900,-905,-905,-905,-905,-900,-900,
-    -895,-900,-905,-905,-905,-905,-900,-895,
-    -890,-900,-905,-905,-905,-905,-900,-890,
-    -890,-900,-900,-900,-900,-900,-900,-890,
-    -880,-890,-890,-895,-895,-890,-890,-880
-};
-int PST_B_ROOK[64] = {
-    -500,-500,-500,-505,-505,-500,-500,-500,
-    -495,-500,-500,-500,-500,-500,-500,-495,
-    -495,-500,-500,-500,-500,-500,-500,-495,
-    -495,-500,-500,-500,-500,-500,-500,-495,
-    -495,-500,-500,-500,-500,-500,-500,-495,
-    -495,-500,-500,-500,-500,-500,-500,-495,
-    -505,-510,-510,-510,-510,-510,-510,-505,
-    -500,-500,-500,-500,-500,-500,-500,-500
-};
-int PST_B_BISHOP[64] = {
-    -310,-320,-320,-320,-320,-320,-320,-310,
-    -320,-335,-330,-330,-330,-330,-335,-320,
-    -320,-340,-340,-340,-340,-340,-340,-320,
-    -320,-330,-340,-340,-340,-340,-330,-320,
-    -320,-335,-335,-340,-340,-335,-335,-320,
-    -320,-330,-335,-340,-340,-335,-330,-320,
-    -320,-330,-330,-330,-330,-330,-330,-320,
-    -310,-320,-320,-320,-320,-320,-320,-310
-};
-int PST_B_KNIGHT[64] = {
-    -270,-280,-290,-290,-290,-290,-280,-270,
-    -280,-300,-320,-325,-325,-320,-300,-280,
-    -290,-325,-330,-335,-335,-330,-325,-290,
-    -290,-320,-335,-340,-340,-335,-320,-290,
-    -290,-325,-335,-340,-340,-335,-325,-290,
-    -290,-320,-330,-335,-335,-330,-320,-290,
-    -280,-300,-320,-320,-320,-320,-300,-280,
-    -270,-280,-290,-290,-290,-290,-280,-270
-};
-int PST_B_PAWN[64] = {
-       0,   0,   0,   0,   0,   0,   0,   0,
-    -105,-110,-110, -80, -80,-110,-110,-105,
-    -105, -95, -90,-100,-100, -90, -95,-105,
-    -100,-100,-100,-120,-120,-100,-100,-100,
-    -105,-105,-110,-125,-125,-110,-105,-105,
-    -110,-110,-120,-130,-130,-120,-110,-110,
-    -150,-150,-150,-150,-150,-150,-150,-150,
-       0,   0,   0,   0,   0,   0,   0,   0
-};
+
+int get_PST_value(int figure, int square)
+{
+    int k = 1;
+    if(get_color(figure) == BLACK)
+    {
+        square = reversed64[square];
+        k = -1;
+    }
+    switch(get_value(figure))
+    {
+        case QUEEN : return k * PST_QUEEN[square];
+        case ROOK  : return k * PST_ROOK[square];
+        case BISHOP: return k * PST_BISHOP[square];
+        case KNIGHT: return k * PST_KNIGHT[square];
+        case PAWN  : return k * PST_PAWN[square];
+    }
+}
+
+int distance[120][120];
+void init_distance()
+{
+    for(int i = 0; i < 120; i += 1)
+    {
+        for(int j = 0; j < 120; j += 1)
+        {
+            int distance_vertical = abs(i % 10 - j % 10);
+            int distance_horizontal = abs(i / 10 - j / 10);
+            distance[i][j] = distance_vertical + distance_horizontal;
+        }
+    }
+}
+
+int get_distance_bonus(int figure, int square, int place_of_king)
+{
+    int distance_bonus = 14 - distance[square][place_of_king];
+    switch(get_value(figure))
+    {
+        case QUEEN : return distance_bonus * 5 / 2;
+        case ROOK  : return distance_bonus / 2;
+        case BISHOP: return distance_bonus / 2;
+        case KNIGHT: return distance_bonus;
+        case PAWN  : return distance_bonus / 2;
+        case KING  : return 0;
+    }
+}
+
+#define UNDEVELOPED_ROOK_PENALTY -30
+#define PAWN_ON_HORIONTAL_2 20
+#define PAWN_ON_HORIONTAL_3 10
+#define KING_IN_CENTER_PENALTY -10
+
+#define PAWN_ISOLATED_PENALTY -15
+#define PAWN_DOUBLED_PENALTY -10
 
 int evaluate(int alpha, int beta)
 {
@@ -1019,50 +1058,225 @@ int evaluate(int alpha, int beta)
             return eval;
     }
     
+    int white_pawns_in_verticals[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int black_pawns_in_verticals[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    
     int evaluation = 0;
+    int current_figure_material = 0;
+    int white_king_tropism = 0;
+    int black_king_tropism = 0;
+    
     for(int i = 0; i < 64; i += 1)
     {
-        switch(board[board64[i]])
+        int current_cell = board64[i];
+        int figure = board[current_cell];
+        int color = get_color(figure);
+        int value = get_value(figure);
+        
+        if(figure == EMPTY || value == KING) continue;
+        
+        int material_value = get_material_value(color, value);
+        if(value != PAWN) current_figure_material += abs(material_value);
+        evaluation += material_value;
+        evaluation += get_PST_value(figure, i);
+        
+        if(color == BLACK)
         {
-            case create_figure(WHITE, KING):
-                evaluation += PST_W_KING[i];
-                break;
-            case create_figure(WHITE, QUEEN):
-                evaluation += PST_W_QUEEN[i];
-                break;
-            case create_figure(WHITE, ROOK):
-                evaluation += PST_W_ROOK[i];
-                break;
-            case create_figure(WHITE, BISHOP):
-                evaluation += PST_W_BISHOP[i];
-                break;
-            case create_figure(WHITE, KNIGHT):
-                evaluation += PST_W_KNIGHT[i];
-                break;
-            case create_figure(WHITE, PAWN):
-                evaluation += PST_W_PAWN[i];
-                break;
-            case create_figure(BLACK, KING):
-                evaluation += PST_B_KING[i];
-                break;
-            case create_figure(BLACK, QUEEN):
-                evaluation += PST_B_QUEEN[i];
-                break;
-            case create_figure(BLACK, ROOK):
-                evaluation += PST_B_ROOK[i];
-                break;
-            case create_figure(BLACK, BISHOP):
-                evaluation += PST_B_BISHOP[i];
-                break;
-            case create_figure(BLACK, KNIGHT):
-                evaluation += PST_B_KNIGHT[i];
-                break;
-            case create_figure(BLACK, PAWN):
-                evaluation += PST_B_PAWN[i];
-                break;
+            white_king_tropism += get_distance_bonus(current_cell, figure,
+                                                        place_of_white_king);
+        }
+        else
+        {
+            black_king_tropism += get_distance_bonus(current_cell, figure,
+                                                        place_of_black_king);
+        }
+        
+        if(value == PAWN)
+        {
+            int vertical = current_cell % 10;
+            if(color == WHITE)
+                white_pawns_in_verticals[vertical] += 1;
+            else
+                black_pawns_in_verticals[vertical] += 1;
         }
     }
+    
+    
+    int white_pawn_shield = 0;
+    if (place_of_white_king == H1 || place_of_white_king == H2 ||
+        place_of_white_king == G1 || place_of_white_king == G2 ||
+        place_of_white_king == F1)
+    {
+        if(board[H2] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[H3] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[G2] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[G3] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[F2] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_2 / 2;
+        if(board[H1] == create_figure(WHITE, ROOK) ||
+           board[H2] == create_figure(WHITE, ROOK) ||
+           board[G1] == create_figure(WHITE, ROOK))
+        {
+            evaluation += UNDEVELOPED_ROOK_PENALTY;
+        }
+    }
+    else if(place_of_white_king == A1 || place_of_white_king == A2 ||
+            place_of_white_king == B1 || place_of_white_king == B2 ||
+            place_of_white_king == C1)
+    {
+        if(board[A2] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[A3] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[B2] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[B3] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[C2] == create_figure(WHITE, PAWN))
+            white_pawn_shield += PAWN_ON_HORIONTAL_2 / 2;
+        if(board[A1] == create_figure(WHITE, ROOK) ||
+           board[A2] == create_figure(WHITE, ROOK) ||
+           board[B1] == create_figure(WHITE, ROOK))
+        {
+            evaluation += UNDEVELOPED_ROOK_PENALTY;
+        }
+    }
+    else
+    {
+        white_pawn_shield = KING_IN_CENTER_PENALTY;
+    }
+    int black_pawn_shield = 0;
+    if (place_of_black_king == H8 || place_of_black_king == H7 ||
+        place_of_black_king == G8 || place_of_black_king == G7 ||
+        place_of_black_king == F8)
+    {
+        if(board[H7] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[H6] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[G7] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[G6] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[F7] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_2 / 2;
+        if(board[H8] == create_figure(BLACK, ROOK) ||
+           board[H7] == create_figure(BLACK, ROOK) ||
+           board[G8] == create_figure(BLACK, ROOK))
+        {
+            evaluation += -UNDEVELOPED_ROOK_PENALTY;
+        }
+    }
+    else if(place_of_black_king == A8 || place_of_black_king == A8 ||
+            place_of_black_king == B8 || place_of_black_king == B8 ||
+            place_of_black_king == C8)
+    {
+        if(board[A7] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[A6] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[B7] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_2;
+        else if(board[B6] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_3;
+        if(board[C7] == create_figure(BLACK, PAWN))
+            black_pawn_shield += PAWN_ON_HORIONTAL_2 / 2;
+        if(board[A8] == create_figure(BLACK, ROOK) ||
+           board[A7] == create_figure(BLACK, ROOK) ||
+           board[B8] == create_figure(BLACK, ROOK))
+        {
+            evaluation += -UNDEVELOPED_ROOK_PENALTY;
+        }
+    }
+    else
+    {
+        black_pawn_shield = KING_IN_CENTER_PENALTY;
+    }
+    
+    int white_king_safety = (white_pawn_shield - white_king_tropism);
+    int black_king_safety = (black_pawn_shield - black_king_tropism);
+    evaluation += ((white_king_safety - black_king_safety)
+                        * current_figure_material / MAX_FIGURE_MATERIAL);
+    
+    
+    int white_isolated = 0, black_isolated = 0;
+    int white_doubled = 0, black_doubled = 0;
+    for(int i = 1; i <= 8; i += 1)
+    {
+        if(white_pawns_in_verticals[i - 1] == 0 &&
+           white_pawns_in_verticals[i + 1] == 0)
+        {
+            white_isolated += white_pawns_in_verticals[i];
+        }
+        else if(white_pawns_in_verticals[i] > 1)
+        {
+            white_doubled += white_pawns_in_verticals[i];
+        }
+        
+        if(black_pawns_in_verticals[i - 1] == 0 &&
+           black_pawns_in_verticals[i + 1] == 0)
+        {
+            black_isolated += white_pawns_in_verticals[i];
+        }
+        else if(white_pawns_in_verticals[i] > 1)
+        {
+            black_doubled += white_pawns_in_verticals[i];
+        }
+    }
+    evaluation += (white_isolated - black_isolated) * PAWN_ISOLATED_PENALTY;
+    evaluation += (white_doubled - black_doubled) * PAWN_DOUBLED_PENALTY;
+    
     return turn_to_move == WHITE? evaluation: -evaluation;
+}
+
+
+int history[32][120];
+void clear_history()
+{
+    for(int i = 0; i < 32; i += 1)
+    {
+        for(int j = 0; j < 120; j += 1)
+        {
+            history[i][j] = 0;
+        }
+    }
+}
+
+int mvv_lva[32][32];
+void mvv_lva_init()
+{
+    for(int i = 0; i < 32; i += 1)
+    {
+        int value_of_figure;
+        switch(get_value(i))
+        {
+            case KING  : value_of_figure = 0; break;
+            case PAWN  : value_of_figure = 1; break;
+            case KNIGHT: value_of_figure = 2; break;
+            case BISHOP: value_of_figure = 2; break;
+            case ROOK  : value_of_figure = 3; break;
+            case QUEEN : value_of_figure = 4; break;
+            default: value_of_figure = -1; 
+        }
+        for(int j = 0; j < 32; j += 1)
+        {
+            int value_of_broken;
+            switch(get_value(j))
+            {
+                case PAWN  : value_of_broken = 10; break;
+                case KNIGHT: value_of_broken = 20; break;
+                case BISHOP: value_of_broken = 20; break;
+                case ROOK  : value_of_broken = 30; break;
+                case QUEEN : value_of_broken = 40; break;
+                default: value_of_broken = -1; 
+            }
+            mvv_lva[i][j] = 100000 * (value_of_broken - value_of_figure);
+        }
+    }
 }
 
 
@@ -1205,10 +1419,10 @@ int ZWS(int beta, int depth, int can_reduce)
     
     if(depth == 0) return quiescence(beta - 1, beta);
     
-    if(depth <= 6 && evaluate(beta - 1, beta) >= beta)
+    /*if(depth <= 6 && evaluate(beta - 1, beta) >= beta)
     {
         return beta;
-    }
+    }*/
     
     if(depth > 2 && can_reduce && !in_check(turn_to_move))
     {
@@ -1408,7 +1622,7 @@ void UCI()
         }
         else if(!strcmp(p, "go"))
         {
-            int depth_limit = 12;
+            int depth_limit = 8;
             while (p = strtok(0, " "))
 			{
                 if(!strcmp(p, "depth"))
@@ -1428,8 +1642,17 @@ void UCI()
 }
 
 
+void init_arrays()
+{
+    init_distance();
+    clear_history();
+    mvv_lva_init();
+    zobrist_init();
+}
+
 int main()
 {
+    init_arrays();
     UCI();
     return 0;
 }
