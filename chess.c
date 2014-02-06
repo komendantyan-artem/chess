@@ -1577,9 +1577,8 @@ void UCI()
     char str[8192];
     char *p;
     
-    printf("id name NAME\n");
-    printf("id author NAME\n");
-    //option
+    printf("id name chess\n");
+    printf("id author komendart\n");
     printf("uciok\n");
     fflush(stdout);
     
@@ -1676,6 +1675,10 @@ void console()
     {
         print_position(is_reversed);
         n = generate_moves(movelist);
+        if(n == 0)
+        {
+            while(1);
+        }
         int flag = 1;
         while(flag)
         {
@@ -1688,14 +1691,21 @@ void console()
                 {
                     make_move(move);
                     flag = 0;
+                    break;
                 }
+            }
+            if(flag)
+            {
+                printf("Incorrect\n");
             }
         }
         
         print_position(is_reversed);
         Move bestmove = search(depth_limit);
         if(bestmove == 0)
-            break;
+        {
+            while(1);
+        }
         make_move(bestmove);
     }
 }
