@@ -128,13 +128,14 @@ struct _flags {
     U64 hash;
 } begin_ply[1000], *ply;
 
-void print_position()
+void print_position(int is_reversed)
 {
     for(int i = 0; i < 8; i += 1)
     {
         for(int j = 0; j < 8; j += 1)
         {
-            switch(board[board64[i*8 + j]])
+            int index = is_reversed ? (7 - i) * 8 + 7 - j: i * 8 + j;
+            switch(board[board64[index]])
             {
                 case EMPTY: printf(".");
                 break; case create_figure(WHITE, KING)  : printf("K");
@@ -1641,6 +1642,64 @@ void UCI()
     }
 }
 
+void console()
+{
+    char str[100];
+    Move movelist[256];
+    int n;
+    int depth_limit = 8;
+    setup_position(start_fen);
+    
+    printf("white or black?\n");
+    while(1)
+    {
+        gets(str);
+        if(!strcmp(str, "white") || ! strcmp(str, "black"))
+        {
+            break;
+        }
+    }
+    int is_reversed;
+    if(!strcmp(str, "black"))
+    {
+        is_reversed = 1;
+        print_position(is_reversed);
+        Move bestmove = search(depth_limit);
+        make_move(bestmove);
+    }
+    else
+    {
+        is_reversed = 0;
+    }
+    
+    while(1)
+    {
+        print_position(is_reversed);
+        n = generate_moves(movelist);
+        int flag = 1;
+        while(flag)
+        {
+            gets(str);
+            Move move = str_to_move(str);
+            for(int i = 0; i < n; i += 1)
+            {
+                Move i_move = movelist[i]; 
+                if(move == i_move)
+                {
+                    make_move(move);
+                    flag = 0;
+                }
+            }
+        }
+        
+        print_position(is_reversed);
+        Move bestmove = search(depth_limit);
+        if(bestmove == 0)
+            break;
+        make_move(bestmove);
+    }
+}
+
 
 void init_arrays()
 {
@@ -1653,6 +1712,21 @@ void init_arrays()
 int main()
 {
     init_arrays();
-    UCI();
+    
+    char str[100];
+    while(1)
+    {
+        gets(str);
+        if(!strcmp(str, "uci"))
+        {
+            UCI();
+            break;
+        }
+        if(!strcmp(str, "console"))
+        {
+            console();
+            break;
+        }
+    }
     return 0;
 }
